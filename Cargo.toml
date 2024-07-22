@@ -5,5 +5,3 @@ edition = "2021"
 
 [dependencies]
 
-[target.arm-unknown-linux-gnueabihf]
-linker = "arm-linux-gnueabihf-gcc"
