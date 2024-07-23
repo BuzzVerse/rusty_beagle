@@ -64,3 +64,23 @@ pub mod lora_defines {
         TIMEOUT_RESET = 100,
     }
 }
+
+#[allow(non_camel_case_types)]
+pub mod api_defines {
+    #[derive(Debug)]
+    pub enum API_Status {
+        API_OK,                     // The operation was successful.
+        API_FAILED_SPI_SET_PIN,     // The pin has failed to have been set
+        API_FAILED_SPI_SET_LEVEL,   // The spi level failed to be set for a pin
+        API_FAILED_SPI_CHIP_SELECT, // The SPI chip select operation failed.
+        API_FAILED_SPI_ADD_DEVICE,  // The spi device failed to be added
+        API_FAILED_SPI_INIT,        // The SPI initialization failed.
+        API_FAILED_SPI_READ,        // The SPI read operation failed.
+        API_FAILED_SPI_READ_BUF,    // The SPI read buffer operation failed.
+        API_FAILED_SPI_WRITE,       // The SPI write operation failed.
+        API_FAILED_SPI_WRITE_BUF,   // The SPI write buffer operation failed.
+        API_BUFFER_TOO_LARGE,       // The buffer is to large to assign.
+        API_NULL_POINTER_ERROR,     // The pointer is NULL.
+        API_SPI_ERROR,              // The SPI operation encountered an error.
+    }
+}
