@@ -12,3 +12,10 @@ rustflags = ["-C", "target-feature=+crt-static"]
 1. ```sudo apt install g++-arm-linux-gnueabihf```
 1. ```rustup target add arm-unknown-linux-gnueabihf```
 1. Build with ```cargo build --target=arm-unknown-linux-gnueabihf```
+
+# Logging
+1. Ensure you have rsyslog downloaded and started, if not:
+    1. ```sudo apt install rsyslog```
+    1. ```sudo systemctl enable rsyslog```
+    1. ```sudo systemctl start rsyslog```
+1. Run rsyslog setup script: rusty_beagle/scripts/setup_rsyslog.sh
