@@ -18,4 +18,4 @@ rustflags = ["-C", "target-feature=+crt-static"]
     1. ```sudo apt install rsyslog```
     1. ```sudo systemctl enable rsyslog```
     1. ```sudo systemctl start rsyslog```
-1. Start the init script in rusty_beagle/scripts/setup_rsyslog.sh
+1. Run rsyslog setup script: rusty_beagle/scripts/setup_rsyslog.sh
