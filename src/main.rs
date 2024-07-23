@@ -1,6 +1,7 @@
 mod defines;
 mod logging;
-extern crate syslog;
+
+extern crate log;
 
 pub use crate::defines::api_defines::API_Status;
 pub use crate::defines::lora_defines::LoRa_Registers;

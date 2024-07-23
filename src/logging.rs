@@ -1,3 +1,5 @@
+extern crate syslog;
+
 use syslog::{BasicLogger, Facility, Formatter3164};
 
 pub fn start_logger() {
