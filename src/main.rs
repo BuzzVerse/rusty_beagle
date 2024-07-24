@@ -18,6 +18,6 @@ fn main() {
     start_logger();
     #[cfg(target_arch = "x86_64")]
     prepare_mocks();
-    let config = Config::from_file("./mqtt_conf.ron");
+    let config = Config::from_file("./conf.ron");
     println!("{:?}", config);
 }
