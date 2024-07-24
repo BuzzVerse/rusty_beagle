@@ -24,10 +24,7 @@ impl Config {
             Ok(config) => config,
             Err(e) => {
                 eprintln!("ERROR {:?}", e);
-                let line = &e.position;
-                let code = &e.code;
-                let cause = e.source().unwrap();
-                error!("While deserializing ron file to config: Code: {code}, Source: {cause}, At: {line}.");
+                error!("While deserializing ron file to config: {e}.");
                 process::exit(-1);
             }
         };
