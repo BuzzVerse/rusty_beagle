@@ -1,9 +1,6 @@
-use bitflags::bitflags;
 use log::{error, info};
 use serde::{Deserialize, Serialize};
-use spidev::{SpiModeFlags, SpidevOptions};
 use std::env;
-use std::error::Error;
 use std::{fs, process};
 
 #[derive(Debug, Deserialize, Serialize)]

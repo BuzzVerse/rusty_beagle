@@ -19,3 +19,6 @@ rustflags = ["-C", "target-feature=+crt-static"]
     1. ```sudo systemctl enable rsyslog```
     1. ```sudo systemctl start rsyslog```
 1. Run rsyslog setup script: rusty_beagle/scripts/setup_rsyslog.sh
+
+# Running on BeagleBone Black
+1. Run SPI setup script: rusty_beagle/scripts/spi_init.sh
