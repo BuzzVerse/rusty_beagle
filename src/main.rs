@@ -1,10 +1,11 @@
+mod config;
 mod defines;
 mod logging;
 
 extern crate log;
 
-pub use crate::defines::api_defines::API_Status;
-pub use crate::defines::lora_defines::LoRa_Registers;
+pub use crate::config::*;
+pub use crate::defines::{api_defines::API_Status, lora_defines::LoRa_Registers};
 pub use crate::logging::start_logger;
 //use log::{debug, error, info, trace, warn};
 
@@ -14,6 +15,11 @@ fn prepare_mocks() {
 }
 
 fn main() {
+    start_logger();
+
     #[cfg(target_arch = "x86_64")]
     prepare_mocks();
+
+    let config = Config::from_file();
+    println!("{:?}", config);
 }
