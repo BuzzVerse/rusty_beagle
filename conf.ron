@@ -5,5 +5,11 @@ Config(
         login: "admin",
         password: "verysecurepassword",
         topic: "lora/sensor"
+    ),
+    spi_config: SPIConfig(
+        bits_per_word: 8,
+        max_speed_hz: 500000,
+        lsb_first: false,
+        spi_mode: SPI_MODE_0,
     )
 )

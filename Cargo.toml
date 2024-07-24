@@ -4,8 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+bitflags = "2.6.0"
 gpio = "0.4.1"
 log = "0.4.22"
+num = "0.4.3"
+num-derive = "0.4.2"
+num-traits = "0.2.19"
 ron = "0.8.1"
 serde = { version = "1.0.204", features = ["derive"] }
 spidev = "0.6.0"
