@@ -1,21 +1,21 @@
-use std::path::Path;
-
-use log::{debug, error, info, trace, warn};
+use log::{error, info};
 use serde::{Deserialize, Serialize};
+use std::env;
+use std::error::Error;
 use std::{fs, process};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
-    pub mqtt_config: MqttConfig,
+    pub mqtt_config: MQTTConfig,
 }
 
 impl Config {
-    pub fn from_file(file_path: &str) -> Config {
-        let config_file = match fs::read_to_string(file_path) {
+    pub fn from_file() -> Config {
+        let config_file = match fs::read_to_string(Config::parse_args()) {
             Ok(s) => s,
             Err(e) => {
                 eprintln!("ERROR {:?}", e);
-                error!("While reading config file: {e}");
+                error!("While reading config file: {e}.");
                 process::exit(-1)
             }
         };
@@ -24,17 +24,35 @@ impl Config {
             Ok(config) => config,
             Err(e) => {
                 eprintln!("ERROR {:?}", e);
-                error!("While deserializing ron file to config: {e}");
+                let line = &e.position;
+                let code = &e.code;
+                let cause = e.source().unwrap();
+                error!("While deserializing ron file to config: Code: {code}, Source: {cause}, At: {line}.");
                 process::exit(-1);
             }
         };
         info!("Succesfully read config file.");
         config
     }
+
+    fn parse_args() -> String {
+        let args: Vec<String> = env::args().collect();
+
+        let file_path = match args.len() {
+            1 => "./conf.ron".to_string(),
+            2 => args[1].to_string(),
+            _ => {
+                eprintln!("Wrong number of arguments!");
+                println!("Usage: ./rusty_beagle [config file]");
+                std::process::exit(-1);
+            }
+        };
+        file_path
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct MqttConfig {
+pub struct MQTTConfig {
     pub ip: String,
     pub port: String,
     pub login: String,

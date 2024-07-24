@@ -1,5 +1,5 @@
 Config(
-    mqtt_config: MqttConfig(
+    mqtt_config: MQTTConfig(
         ip: "192.168.6.2",
         port: "1234",
         login: "admin",
