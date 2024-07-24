@@ -1,4 +1,4 @@
-#!/bin/env bash
+#!/bin/bash
 
 rusty_log="/etc/rsyslog.d/rusty_beagle.conf"
 
