@@ -41,6 +41,7 @@ impl Config {
             _ => {
                 eprintln!("Wrong number of arguments!");
                 println!("Usage: ./rusty_beagle [config file]");
+                error!("Wrong number of arguments.");
                 std::process::exit(-1);
             }
         };
