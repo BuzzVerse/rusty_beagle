@@ -6,14 +6,14 @@ extern crate log;
 pub use crate::defines::api_defines::API_Status;
 pub use crate::defines::lora_defines::LoRa_Registers;
 pub use crate::logging::start_logger;
-use log::{debug, error, info, trace, warn};
+//use log::{debug, error, info, trace, warn};
+
+#[cfg(target_arch = "x86_64")]
+fn prepare_mocks() {
+    println!("prepare_mocks(): Running on x86_64.");
+}
 
 fn main() {
-    start_logger();
-
-    error!("this is an error message");
-    warn!("this is a warning message");
-    info!("this is an info message");
-    debug!("this is a debug message");
-    trace!("this is a trace message");
+    #[cfg(target_arch = "x86_64")]
+    prepare_mocks();
 }
