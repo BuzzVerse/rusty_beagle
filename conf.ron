@@ -14,5 +14,6 @@ Config(
             lsb_first: false,
             spi_mode: SPI_MODE_0,
         ),
+        reset_gpio: 66,
     ),
 )

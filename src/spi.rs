@@ -1,12 +1,17 @@
-use crate::config::SPIConfig;
 use crate::defines::{api_defines::API_Status, lora_defines::*};
 use crate::LoRaConfig;
+#[allow(unused_imports)] // TODO delete later
+use gpio::sysfs::{SysFsGpioInput, SysFsGpioOutput};
+use gpio::GpioOut;
+#[allow(unused_imports)] // TODO delete later
 use log::{debug, error, info, trace, warn};
 use spidev::{SpiModeFlags, Spidev, SpidevOptions, SpidevTransfer};
 use std::io::Result;
 
 pub struct LoRa {
     spidev: Spidev,
+    reset_pin: SysFsGpioOutput,
+    //dio0: SysFsGpioInput, // used to read RX_DONE and TX_DONE
 }
 
 impl LoRa {
@@ -21,7 +26,9 @@ impl LoRa {
             .build();
         spidev.configure(&spi_options)?;
 
-        Ok(LoRa { spidev })
+        let reset_pin = gpio::sysfs::SysFsGpioOutput::open(lora_config.reset_gpio).unwrap();
+
+        Ok(LoRa { spidev, reset_pin })
     }
 
     pub fn spi_read_register(&mut self, register: u8, value: &mut u8) -> API_Status {
@@ -55,5 +62,23 @@ impl LoRa {
             }
             Ok(()) => API_Status::API_OK,
         }
+    }
+
+    pub fn reset(&mut self) -> API_Status {
+        // pull NRST pin low for 1 ms
+        self.reset_pin
+            .set_low()
+            .expect("Could not set reset_pin low.");
+
+        std::thread::sleep(std::time::Duration::from_millis(1));
+
+        self.reset_pin
+            .set_high()
+            .expect("Could not set reset_pin high.");
+
+        // wait for 5 ms before using the chip
+        std::thread::sleep(std::time::Duration::from_millis(5));
+
+        API_Status::API_OK
     }
 }

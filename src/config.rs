@@ -35,7 +35,7 @@ impl Config {
     fn parse_args() -> String {
         let args: Vec<String> = env::args().collect();
 
-        let file_path = match args.len() {
+        match args.len() {
             1 => "./conf.ron".to_string(),
             2 => args[1].to_string(),
             _ => {
@@ -44,8 +44,7 @@ impl Config {
                 error!("Wrong number of arguments.");
                 std::process::exit(-1);
             }
-        };
-        file_path
+        }
     }
 }
 
@@ -70,6 +69,7 @@ pub struct SPIConfig {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct LoRaConfig {
     pub spi_config: SPIConfig,
+    pub reset_gpio: u16, // TODO only allow usable GPIO pins
 }
 
 #[allow(non_camel_case_types)]

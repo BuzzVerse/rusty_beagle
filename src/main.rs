@@ -8,6 +8,7 @@ extern crate log;
 pub use crate::config::*;
 pub use crate::defines::{api_defines::API_Status, lora_defines::*};
 pub use crate::logging::start_logger;
+#[allow(unused_imports)] // TODO delete later
 use log::{debug, error, info, trace, warn};
 use spi::LoRa;
 
@@ -36,12 +37,19 @@ fn main() {
         }
     };
 
+    lora.reset();
+
     let mut value = 0x00;
     lora.spi_read_register(REG_OP_MODE, &mut value);
-    println!("value: {:#04x}", value);
+    println!("value: {:#04x}", value); // expected: 0x09
 
     lora.spi_write_register(REG_OP_MODE, 0x08);
 
     lora.spi_read_register(REG_OP_MODE, &mut value);
-    println!("value: {:#04x}", value);
+    println!("value: {:#04x}", value); // expected: 0x08
+
+    lora.reset();
+
+    lora.spi_read_register(REG_OP_MODE, &mut value);
+    println!("value: {:#04x}", value); // expected: 0x09
 }
