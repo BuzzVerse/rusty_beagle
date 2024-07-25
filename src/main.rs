@@ -17,10 +17,10 @@ fn prepare_mocks() {
 }
 
 fn main() {
-    start_logger();
-
     #[cfg(target_arch = "x86_64")]
     prepare_mocks();
+
+    start_logger();
 
     let config = Config::from_file();
 
@@ -32,7 +32,8 @@ fn main() {
             std::process::exit(-1);
         }
     };
+
     let mut value = 0x00;
     lora.spi_read_register(REG_OP_MODE, &mut value);
-    println!("value: {}", value);
+    println!("value: {:#04x}", value);
 }
