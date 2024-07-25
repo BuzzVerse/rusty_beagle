@@ -6,7 +6,7 @@ use std::{fs, process};
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
     pub mqtt_config: MQTTConfig,
-    pub spi_config: SPIConfig,
+    pub lora_config: LoRaConfig,
 }
 
 impl Config {
@@ -65,6 +65,11 @@ pub struct SPIConfig {
     pub max_speed_hz: u32,
     pub lsb_first: bool,
     pub spi_mode: SpiFlags,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct LoRaConfig {
+    pub spi_config: SPIConfig,
 }
 
 #[allow(non_camel_case_types)]

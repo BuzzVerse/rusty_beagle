@@ -9,7 +9,7 @@ pub use crate::config::*;
 pub use crate::defines::{api_defines::API_Status, lora_defines::*};
 pub use crate::logging::start_logger;
 use log::{debug, error, info, trace, warn};
-use spi::Lora;
+use spi::LoRa;
 
 #[cfg(target_arch = "x86_64")]
 fn prepare_mocks() {
@@ -24,8 +24,11 @@ fn main() {
 
     let config = Config::from_file();
 
-    let mut lora = match Lora::from_config(config.spi_config) {
-        Ok(lora) => lora,
+    let mut lora = match LoRa::from_config(config.lora_config) {
+        Ok(lora) => {
+            info!("LoRa object created successfully.");
+            lora
+        }
         Err(e) => {
             eprintln!("When creating lora object: {:?}", e);
             error!("When creating lora object: {e}");
