@@ -36,4 +36,9 @@ fn main() {
     let mut value = 0x00;
     lora.spi_read_register(REG_OP_MODE, &mut value);
     println!("value: {:#04x}", value);
+
+    lora.spi_write_register(REG_OP_MODE, 0x08);
+
+    lora.spi_read_register(REG_OP_MODE, &mut value);
+    println!("value: {:#04x}", value);
 }

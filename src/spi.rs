@@ -39,4 +39,19 @@ impl Lora {
             }
         }
     }
+
+    pub fn spi_write_register(&mut self, register: u8, value: u8) -> API_Status {
+        let tx_buf: [u8; 2] = [register | SPI_WRITE, value];
+        let mut rx_buf: [u8; 2] = [0x00, 0x00];
+        let mut transfer = SpidevTransfer::read_write(&tx_buf, &mut rx_buf);
+
+        match self.spidev.transfer(&mut transfer) {
+            Err(e) => {
+                eprintln!("{:?}", e.to_string());
+                error!("While reading LoRa register {register} got {e}");
+                API_Status::API_SPI_ERROR
+            }
+            Ok(()) => API_Status::API_OK,
+        }
+    }
 }
