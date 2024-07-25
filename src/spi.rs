@@ -5,7 +5,7 @@ use spidev::{SpiModeFlags, Spidev, SpidevOptions, SpidevTransfer};
 use std::io::Result;
 
 pub struct Lora {
-    pub spidev: Spidev,
+    spidev: Spidev,
 }
 
 impl Lora {
@@ -48,7 +48,7 @@ impl Lora {
         match self.spidev.transfer(&mut transfer) {
             Err(e) => {
                 eprintln!("{:?}", e.to_string());
-                error!("While reading LoRa register {register} got {e}");
+                error!("While writing to LoRa register {register} got {e}");
                 API_Status::API_SPI_ERROR
             }
             Ok(()) => API_Status::API_OK,

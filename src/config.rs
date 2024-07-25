@@ -14,7 +14,7 @@ impl Config {
         let config_file = match fs::read_to_string(Config::parse_args()) {
             Ok(s) => s,
             Err(e) => {
-                eprintln!("ERROR {:?}", e);
+                eprintln!("ERROR {:?}", e.to_string());
                 error!("While reading config file: {e}.");
                 process::exit(-1)
             }
@@ -23,7 +23,7 @@ impl Config {
         let config: Config = match ron::from_str(config_file.as_str()) {
             Ok(config) => config,
             Err(e) => {
-                eprintln!("ERROR {:?}", e);
+                eprintln!("ERROR {:?}", e.to_string());
                 error!("While deserializing ron file to config: {e}.");
                 process::exit(-1);
             }
