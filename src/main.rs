@@ -5,7 +5,7 @@ mod logging;
 extern crate log;
 
 pub use crate::config::*;
-pub use crate::defines::{api_defines::API_Status, lora_defines::LoRa_Registers};
+pub use crate::defines::{api_defines::API_Status, lora_defines::*};
 pub use crate::logging::start_logger;
 use spidev::{SpiModeFlags, Spidev, SpidevOptions, SpidevTransfer};
 //use log::{debug, error, info, trace, warn};
@@ -15,11 +15,8 @@ fn prepare_mocks() {
     println!("prepare_mocks(): Running on x86_64.");
 }
 
-const SPI_READ: u8 = 0x00;
-const SPI_WRITE: u8 = 0x80;
-
-fn spi_read_register(spidev: &mut Spidev, register: LoRa_Registers, value: &mut u8) -> API_Status {
-    let tx: [u8; 2] = [register as u8 | SPI_READ, 0x00];
+fn spi_read_register(spidev: &mut Spidev, register: u8, value: &mut u8) -> API_Status {
+    let tx: [u8; 2] = [register | SPI_READ, 0x00];
     let mut rx: [u8; 2] = [0x00, 0x00];
     let mut transfer = SpidevTransfer::read_write(&tx, &mut rx);
 
@@ -47,6 +44,6 @@ fn main() {
     spidev.configure(&spi_options).unwrap();
 
     let mut value = 0x00;
-    spi_read_register(&mut spidev, LoRa_Registers::REG_OP_MODE, &mut value);
+    spi_read_register(&mut spidev, REG_OP_MODE, &mut value);
     println!("value: {}", value);
 }

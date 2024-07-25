@@ -1,68 +1,77 @@
 #[allow(non_camel_case_types)]
 pub mod lora_defines {
-    #[derive(Debug)]
-    pub enum LoRa_Registers {
-        REG_FIFO = 0x00,
-        REG_OP_MODE = 0x01,
-        REG_FRF_MSB = 0x06,
-        REG_FRF_MID = 0x07,
-        REG_FRF_LSB = 0x08,
-        REG_PA_CONFIG = 0x09,
-        REG_LNA = 0x0c,
-        REG_FIFO_ADDR_PTR = 0x0d,
-        REG_FIFO_TX_BASE_ADDR = 0x0e,
-        REG_FIFO_RX_BASE_ADDR = 0x0f,
-        REG_FIFO_RX_CURRENT_ADDR = 0x10,
-        REG_IRQ_FLAGS = 0x12,
-        REG_RX_NB_BYTES = 0x13,
-        REG_PKT_SNR_VALUE = 0x19,
-        REG_PKT_RSSI_VALUE = 0x1a,
-        REG_MODEM_CONFIG_1 = 0x1d,
-        REG_MODEM_CONFIG_2 = 0x1e,
-        REG_PREAMBLE_MSB = 0x20,
-        REG_PREAMBLE_LSB = 0x21,
-        REG_PAYLOAD_LENGTH = 0x22,
-        REG_MODEM_CONFIG_3 = 0x26,
-        REG_RSSI_WIDEBAND = 0x2c,
-        REG_DETECTION_OPTIMIZE = 0x31,
-        REG_DETECTION_THRESHOLD = 0x37,
-        REG_SYNC_WORD = 0x39,
-        REG_REG_IRQ_FLAGS_2 = 0x3F,
-        REG_DIO_MAPPING_1 = 0x40,
-        REG_DIO_MAPPING_2 = 0x41,
-        REG_VERSION = 0x42,
-    }
+    /*
+     * Register definitions
+     */
+    pub const REG_FIFO: u8 = 0x00;
+    pub const REG_OP_MODE: u8 = 0x01;
+    pub const REG_FRF_MSB: u8 = 0x06;
+    pub const REG_FRF_MID: u8 = 0x07;
+    pub const REG_FRF_LSB: u8 = 0x08;
+    pub const REG_PA_CONFIG: u8 = 0x09;
+    pub const REG_LNA: u8 = 0x0c;
+    pub const REG_FIFO_ADDR_PTR: u8 = 0x0d;
+    pub const REG_FIFO_TX_BASE_ADDR: u8 = 0x0e;
+    pub const REG_FIFO_RX_BASE_ADDR: u8 = 0x0f;
+    pub const REG_FIFO_RX_CURRENT_ADDR: u8 = 0x10;
+    pub const REG_IRQ_FLAGS: u8 = 0x12;
+    pub const REG_RX_NB_BYTES: u8 = 0x13;
+    pub const REG_PKT_SNR_VALUE: u8 = 0x19;
+    pub const REG_PKT_RSSI_VALUE: u8 = 0x1a;
+    pub const REG_MODEM_CONFIG_1: u8 = 0x1d;
+    pub const REG_MODEM_CONFIG_2: u8 = 0x1e;
+    pub const REG_PREAMBLE_MSB: u8 = 0x20;
+    pub const REG_PREAMBLE_LSB: u8 = 0x21;
+    pub const REG_PAYLOAD_LENGTH: u8 = 0x22;
+    pub const REG_MODEM_CONFIG_3: u8 = 0x26;
+    pub const REG_RSSI_WIDEBAND: u8 = 0x2c;
+    pub const REG_DETECTION_OPTIMIZE: u8 = 0x31;
+    pub const REG_DETECTION_THRESHOLD: u8 = 0x37;
+    pub const REG_SYNC_WORD: u8 = 0x39;
+    pub const REG_REG_IRQ_FLAGS_2: u8 = 0x3F;
+    pub const REG_DIO_MAPPING_1: u8 = 0x40;
+    pub const REG_DIO_MAPPING_2: u8 = 0x41;
+    pub const REG_VERSION: u8 = 0x42;
 
-    #[derive(Debug)]
-    pub enum Transceiver_Modes {
-        MODE_LONG_RANGE_MODE = 0x80,
-        MODE_SLEEP = 0x00,
-        MODE_STDBY = 0x01,
-        MODE_TX = 0x03,
-        MODE_RX_CONTINUOUS = 0x05,
-        MODE_RX_SINGLE = 0x06,
-    }
+    /*
+     * Transceiver modes
+     */
+    pub const MODE_LONG_RANGE_MODE: u8 = 0x80;
+    pub const MODE_SLEEP: u8 = 0x00;
+    pub const MODE_STDBY: u8 = 0x01;
+    pub const MODE_TX: u8 = 0x03;
+    pub const MODE_RX_CONTINUOUS: u8 = 0x05;
+    pub const MODE_RX_SINGLE: u8 = 0x06;
 
-    #[derive(Debug)]
-    pub enum PA_Configuration {
-        PA_BOOST = 0x80,
-    }
+    /*
+     * PA configuration
+     */
+    pub const PA_BOOST: u8 = 0x80;
 
-    #[derive(Debug)]
-    pub enum IRQ_Masks {
-        IRQ_TX_DONE_MASK = 0x08,
-        IRQ_RX_DONE_MASK = 0x40,
-        IRQ_PAYLOAD_CRC_ERROR = 0x20,
-        PA_OUTPUT_RFO_PIN = 0,
-        PA_OUTPUT_PA_BOOST_PIN = 1,
-    }
+    /*
+     * IRQ masks
+     */
+    pub const IRQ_TX_DONE_MASK: u8 = 0x08;
+    pub const IRQ_PAYLOAD_CRC_ERROR_MASK: u8 = 0x20;
+    pub const IRQ_RX_DONE_MASK: u8 = 0x40;
+    pub const IRQ_PAYLOAD_CRC_ERROR: u8 = 0x20;
+    pub const PA_OUTPUT_RFO_PIN: u8 = 0;
+    pub const PA_OUTPUT_PA_BOOST_PIN: u8 = 1;
 
-    #[derive(Debug)]
-    pub enum LoRa_Delays {
-        LORA_DELAY_10MS = 10,
-        LORA_DELAY_20MS = 20,
-        TIMEOUT_RESET = 100,
-    }
+    /*
+     * Lora delays
+     */
+    pub const LORA_DELAY_10MS: u8 = 10;
+    pub const LORA_DELAY_20MS: u8 = 20;
+    pub const TIMEOUT_RESET: u8 = 100;
+
+    pub const LORA_TAG: &str = "LORA_DRIVER";
+
+    /*
+     * Spi defines
+     */
+    pub const SPI_READ: u8 = 0x00;
+    pub const SPI_WRITE: u8 = 0x80;
 }
 
 #[allow(non_camel_case_types)]
