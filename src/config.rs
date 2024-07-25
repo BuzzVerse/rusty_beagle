@@ -20,16 +20,17 @@ impl Config {
             }
         };
 
-        let config: Config = match ron::from_str(config_file.as_str()) {
-            Ok(config) => config,
+        match ron::from_str(config_file.as_str()) {
+            Ok(config) => {
+                info!("Succesfully read config file.");
+                config
+            }
             Err(e) => {
                 eprintln!("ERROR {:?}", e.to_string());
                 error!("While deserializing ron file to config: {e}.");
                 process::exit(-1);
             }
-        };
-        info!("Succesfully read config file.");
-        config
+        }
     }
 
     fn parse_args() -> String {
@@ -69,7 +70,40 @@ pub struct SPIConfig {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct LoRaConfig {
     pub spi_config: SPIConfig,
-    pub reset_gpio: u16, // TODO only allow usable GPIO pins
+    pub reset_gpio: GPIOPinNumber,
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
+pub enum GPIOPinNumber {
+    GPIO_44 = 44,
+    GPIO_45 = 45,
+    GPIO_66 = 66,
+    GPIO_67 = 67,
+    GPIO_68 = 68,
+    GPIO_69 = 69,
+}
+
+pub struct GPIOPin {
+    pub chip: String,
+    pub offset: u32,
+}
+
+impl GPIOPin {
+    pub fn from_gpio_pin_number(gpio_pin_number: GPIOPinNumber) -> GPIOPin {
+        let pin_number = gpio_pin_number.clone() as u32;
+        let chip = match pin_number {
+            0..=31 => "gpiochip0".to_string(),
+            32..=63 => "gpiochip1".to_string(),
+            64..=95 => "gpiochip2".to_string(),
+            _ => "gpiochip3".to_string(),
+        };
+
+        GPIOPin {
+            chip,
+            offset: pin_number % 32,
+        }
+    }
 }
 
 #[allow(non_camel_case_types)]

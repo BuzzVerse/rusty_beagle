@@ -1,7 +1,7 @@
 mod config;
 mod defines;
 mod logging;
-mod spi;
+mod lora;
 
 extern crate log;
 
@@ -10,7 +10,7 @@ pub use crate::defines::{api_defines::API_Status, lora_defines::*};
 pub use crate::logging::start_logger;
 #[allow(unused_imports)] // TODO delete later
 use log::{debug, error, info, trace, warn};
-use spi::LoRa;
+use lora::LoRa;
 
 #[cfg(target_arch = "x86_64")]
 fn prepare_mocks() {

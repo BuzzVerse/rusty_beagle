@@ -1,8 +1,8 @@
 use crate::defines::{api_defines::API_Status, lora_defines::*};
-use crate::LoRaConfig;
+use crate::{GPIOPin, LoRaConfig};
 #[allow(unused_imports)] // TODO delete later
-use gpio::sysfs::{SysFsGpioInput, SysFsGpioOutput};
-use gpio::GpioOut;
+use gpiod::{AsValuesMut, Chip, Masked, Options};
+use gpiod::{Lines, Output};
 #[allow(unused_imports)] // TODO delete later
 use log::{debug, error, info, trace, warn};
 use spidev::{SpiModeFlags, Spidev, SpidevOptions, SpidevTransfer};
@@ -10,7 +10,7 @@ use std::io::Result;
 
 pub struct LoRa {
     spidev: Spidev,
-    reset_pin: SysFsGpioOutput,
+    reset_pin: Lines<Output>,
     //dio0: SysFsGpioInput, // used to read RX_DONE and TX_DONE
 }
 
@@ -25,9 +25,26 @@ impl LoRa {
             .mode(SpiModeFlags::from_bits(local_spi_config.spi_mode as u32).unwrap())
             .build();
         spidev.configure(&spi_options)?;
+        let gpio_pin = GPIOPin::from_gpio_pin_number(lora_config.reset_gpio);
 
-        let reset_pin = gpio::sysfs::SysFsGpioOutput::open(lora_config.reset_gpio).unwrap();
-
+        // let reset_pin = SysFsGpioOutput::open(lora_config.reset_gpio as u16).unwrap();
+        let chip = match Chip::new(gpio_pin.chip) {
+            Ok(chip) => chip,
+            Err(e) => {
+                eprintln!("Chip: {}", e.to_string());
+                error!("Chip: {e}");
+                std::process::exit(-1);
+            }
+        };
+        let opts = Options::output([gpio_pin.offset]);
+        let reset_pin = match chip.request_lines(opts) {
+            Ok(reset_pin) => reset_pin,
+            Err(e) => {
+                eprintln!("Reset pin: {}", e.to_string());
+                error!("Reset pin: {e}");
+                std::process::exit(-1);
+            }
+        };
         Ok(LoRa { spidev, reset_pin })
     }
 
@@ -66,15 +83,26 @@ impl LoRa {
 
     pub fn reset(&mut self) -> API_Status {
         // pull NRST pin low for 5 ms
-        self.reset_pin
-            .set_low()
-            .expect("Could not set reset_pin low.");
+        match self.reset_pin.set_values(0x00 as u8) {
+            Ok(()) => (),
+            Err(e) => {
+                eprintln!("While setting reset_pin low: {}", e.to_string());
+                error!("While setting reset_pin low: {e}");
+                std::process::exit(-1);
+            }
+        };
+        // .expect("Could not set reset_pin low.");
 
         std::thread::sleep(std::time::Duration::from_millis(5));
 
-        self.reset_pin
-            .set_high()
-            .expect("Could not set reset_pin high.");
+        match self.reset_pin.set_values(0x01 as u8) {
+            Ok(()) => (),
+            Err(e) => {
+                eprintln!("While setting reset_pin high: {}", e.to_string());
+                error!("While setting reset_pin high: {e}");
+                std::process::exit(-1);
+            }
+        }
 
         // wait for 10 ms before using the chip
         std::thread::sleep(std::time::Duration::from_millis(10));

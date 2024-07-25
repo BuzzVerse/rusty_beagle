@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-gpio = "0.4.1"
+gpiod = "0.3.0"
 log = "0.4.22"
 ron = "0.8.1"
 serde = { version = "1.0.204", features = ["derive"] }
