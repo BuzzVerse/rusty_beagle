@@ -60,6 +60,7 @@ pub struct MQTTConfig {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SPIConfig {
+    pub spidev_path: String,
     pub bits_per_word: u8,
     pub max_speed_hz: u32,
     pub lsb_first: bool,

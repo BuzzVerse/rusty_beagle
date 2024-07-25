@@ -7,9 +7,10 @@ Config(
         topic: "lora/sensor"
     ),
     spi_config: SPIConfig(
+        spidev_path: "/dev/spidev0.0",
         bits_per_word: 8,
         max_speed_hz: 500000,
         lsb_first: false,
         spi_mode: SPI_MODE_0,
-    )
+    ),
 )
