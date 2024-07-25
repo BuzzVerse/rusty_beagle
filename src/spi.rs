@@ -65,19 +65,19 @@ impl LoRa {
     }
 
     pub fn reset(&mut self) -> API_Status {
-        // pull NRST pin low for 1 ms
+        // pull NRST pin low for 5 ms
         self.reset_pin
             .set_low()
             .expect("Could not set reset_pin low.");
 
-        std::thread::sleep(std::time::Duration::from_millis(1));
+        std::thread::sleep(std::time::Duration::from_millis(5));
 
         self.reset_pin
             .set_high()
             .expect("Could not set reset_pin high.");
 
-        // wait for 5 ms before using the chip
-        std::thread::sleep(std::time::Duration::from_millis(5));
+        // wait for 10 ms before using the chip
+        std::thread::sleep(std::time::Duration::from_millis(10));
 
         API_Status::API_OK
     }
