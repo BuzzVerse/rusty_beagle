@@ -91,7 +91,7 @@ pub struct GPIOPin {
 
 impl GPIOPin {
     pub fn from_gpio_pin_number(gpio_pin_number: GPIOPinNumber) -> GPIOPin {
-        let pin_number = gpio_pin_number.clone() as u32;
+        let pin_number = gpio_pin_number as u32;
         let chip = match pin_number {
             0..=31 => "gpiochip0".to_string(),
             32..=63 => "gpiochip1".to_string(),
