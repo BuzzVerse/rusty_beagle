@@ -1,6 +1,6 @@
 {
     "rust-analyzer.diagnostics.disabled": [
         "inactive-code"
-    ],
+    ], 
     "rust-analyzer.cargo.target": "arm-unknown-linux-gnueabihf"
-}
+} 
