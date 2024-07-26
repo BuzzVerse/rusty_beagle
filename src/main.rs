@@ -12,15 +12,7 @@ pub use crate::logging::start_logger;
 use log::{debug, error, info, trace, warn};
 use lora::LoRa;
 
-#[cfg(target_arch = "x86_64")]
-fn prepare_mocks() {
-    println!("prepare_mocks(): Running on x86_64.");
-}
-
 fn main() {
-    #[cfg(target_arch = "x86_64")]
-    prepare_mocks();
-
     start_logger();
 
     let config = Config::from_file();
