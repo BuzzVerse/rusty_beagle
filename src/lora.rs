@@ -48,15 +48,15 @@ impl LoRa {
         Ok(LoRa { spidev, reset_pin })
     }
 
-    pub fn spi_read_register(&mut self, register: u8, value: &mut u8) -> API_Status {
-        let tx_buf: [u8; 2] = [register | SPI_READ, 0x00];
+    pub fn spi_read_register(&mut self, register: LoRaRegister, value: &mut u8) -> API_Status {
+        let tx_buf: [u8; 2] = [register as u8 | SPIIO::SPI_READ as u8, 0x00];
         let mut rx_buf: [u8; 2] = [0x00, 0x00];
         let mut transfer = SpidevTransfer::read_write(&tx_buf, &mut rx_buf);
 
         match self.spidev.transfer(&mut transfer) {
             Err(e) => {
                 eprintln!("{:?}", e.to_string());
-                error!("While reading LoRa register {register} got {e}");
+                error!("While reading LoRa register {:#?} got {e}", register);
                 API_Status::API_SPI_ERROR
             }
             Ok(()) => {
@@ -66,15 +66,15 @@ impl LoRa {
         }
     }
 
-    pub fn spi_write_register(&mut self, register: u8, value: u8) -> API_Status {
-        let tx_buf: [u8; 2] = [register | SPI_WRITE, value];
+    pub fn spi_write_register(&mut self, register: LoRaRegister, value: u8) -> API_Status {
+        let tx_buf: [u8; 2] = [register as u8 | SPIIO::SPI_WRITE as u8, value];
         let mut rx_buf: [u8; 2] = [0x00, 0x00];
         let mut transfer = SpidevTransfer::read_write(&tx_buf, &mut rx_buf);
 
         match self.spidev.transfer(&mut transfer) {
             Err(e) => {
                 eprintln!("{:?}", e.to_string());
-                error!("While writing to LoRa register {register} got {e}");
+                error!("While writing to LoRa register {:#?} got {e}", register);
                 API_Status::API_SPI_ERROR
             }
             Ok(()) => API_Status::API_OK,
