@@ -19,3 +19,10 @@ rustflags = ["-C", "target-feature=+crt-static"]
     1. ```sudo systemctl enable rsyslog```
     1. ```sudo systemctl start rsyslog```
 1. Run rsyslog setup script: rusty_beagle/scripts/setup_rsyslog.sh
+
+# Running on BeagleBone Black
+1. Ensure that HDMI is disabled: in /boot/uEnv.txt uncomment the line:
+    - ```disable_uboot_overlay_video=1```
+1. Ensure that BeagleBone Black has and uses the provided Device Tree Overlays for SPI found in /lib/firmware: in /boot/uEnv.txt uncomment and modify the lines under ```###Additional custom capes```:
+    - ```uboot_overlay_addr4=/lib/firmware/BB-SPIDEV0-00A0.dtbo```
+    - ```uboot_overlay_addr5=/lib/firmware/BB-SPIDEV1-00A0.dtbo```

@@ -1,55 +1,67 @@
 #[allow(non_camel_case_types)]
 pub mod lora_defines {
-    #[derive(Debug)]
-    pub enum LoRa_Registers {
-        REG_FIFO = 0x00,
-        REG_OP_MODE = 0x01,
-        REG_FRF_MSB = 0x06,
-        REG_FRF_MID = 0x07,
-        REG_FRF_LSB = 0x08,
-        REG_PA_CONFIG = 0x09,
-        REG_LNA = 0x0c,
-        REG_FIFO_ADDR_PTR = 0x0d,
-        REG_FIFO_TX_BASE_ADDR = 0x0e,
-        REG_FIFO_RX_BASE_ADDR = 0x0f,
-        REG_FIFO_RX_CURRENT_ADDR = 0x10,
-        REG_IRQ_FLAGS = 0x12,
-        REG_RX_NB_BYTES = 0x13,
-        REG_PKT_SNR_VALUE = 0x19,
-        REG_PKT_RSSI_VALUE = 0x1a,
-        REG_MODEM_CONFIG_1 = 0x1d,
-        REG_MODEM_CONFIG_2 = 0x1e,
-        REG_PREAMBLE_MSB = 0x20,
-        REG_PREAMBLE_LSB = 0x21,
-        REG_PAYLOAD_LENGTH = 0x22,
-        REG_MODEM_CONFIG_3 = 0x26,
-        REG_RSSI_WIDEBAND = 0x2c,
-        REG_DETECTION_OPTIMIZE = 0x31,
-        REG_DETECTION_THRESHOLD = 0x37,
-        REG_SYNC_WORD = 0x39,
-        REG_REG_IRQ_FLAGS_2 = 0x3F,
-        REG_DIO_MAPPING_1 = 0x40,
-        REG_DIO_MAPPING_2 = 0x41,
-        REG_VERSION = 0x42,
+    /*
+     * Register definitions
+     */
+    #[derive(Debug, Clone, Copy)]
+    pub enum LoRaRegister {
+        FIFO = 0x00,
+        OP_MODE = 0x01,
+        FRF_MSB = 0x06,
+        FRF_MID = 0x07,
+        FRF_LSB = 0x08,
+        PA_CONFIG = 0x09,
+        LNA = 0x0C,
+        FIFO_ADDR_PTR = 0x0D,
+        FIFO_TX_BASE_ADDR = 0x0E,
+        FIFO_RX_BASE_ADDR = 0x0F,
+        FIFO_RX_CURRENT_ADDR = 0x10,
+        IRQ_FLAGS = 0x12,
+        RX_NB_BYTES = 0x13,
+        PKT_SNR_VALUE = 0x19,
+        PKT_RSSI_VALUE = 0x1A,
+        MODEM_CONFIG_1 = 0x1D,
+        MODEM_CONFIG_2 = 0x1E,
+        PREAMBLE_MSB = 0x20,
+        PREAMBLE_LSB = 0x21,
+        PAYLOAD_LENGTH = 0x22,
+        MODEM_CONFIG_3 = 0x26,
+        RSSI_WIDEBAND = 0x2C,
+        DETECTION_OPTIMIZE = 0x31,
+        DETECTION_THRESHOLD = 0x37,
+        SYNC_WORD = 0x39,
+        REG_IRQ_FLAGS_2 = 0x3F,
+        DIO_MAPPING_1 = 0x40,
+        DIO_MAPPING_2 = 0x41,
+        VERSION = 0x42,
     }
 
-    #[derive(Debug)]
-    pub enum Transceiver_Modes {
-        MODE_LONG_RANGE_MODE = 0x80,
-        MODE_SLEEP = 0x00,
-        MODE_STDBY = 0x01,
-        MODE_TX = 0x03,
-        MODE_RX_CONTINUOUS = 0x05,
-        MODE_RX_SINGLE = 0x06,
+    /*
+     * Transceiver modes
+     */
+    #[derive(Debug, Clone, Copy)]
+    pub enum LoRaMode {
+        LONG_RANGE = 0x80,
+        SLEEP = 0x00,
+        STDBY = 0x01,
+        TX = 0x03,
+        RX_CONTINUOUS = 0x05,
+        RX_SINGLE = 0x06,
     }
 
-    #[derive(Debug)]
-    pub enum PA_Configuration {
+    /*
+     * PA configuration
+     */
+    #[derive(Debug, Clone, Copy)]
+    pub enum PAConfiguration {
         PA_BOOST = 0x80,
     }
 
-    #[derive(Debug)]
-    pub enum IRQ_Masks {
+    /*
+     * IRQ masks
+     */
+    #[derive(Debug, Clone, Copy)]
+    pub enum IRQMask {
         IRQ_TX_DONE_MASK = 0x08,
         IRQ_RX_DONE_MASK = 0x40,
         IRQ_PAYLOAD_CRC_ERROR = 0x20,
@@ -57,11 +69,27 @@ pub mod lora_defines {
         PA_OUTPUT_PA_BOOST_PIN = 1,
     }
 
-    #[derive(Debug)]
-    pub enum LoRa_Delays {
+    impl IRQMask {
+        pub const IRQ_PAYLOAD_CRC_ERROR_MASK: IRQMask = IRQMask::IRQ_PAYLOAD_CRC_ERROR;
+    }
+
+    /*
+     * Lora delays
+     */
+    #[derive(Debug, Clone, Copy)]
+    pub enum LoRaDelay {
         LORA_DELAY_10MS = 10,
         LORA_DELAY_20MS = 20,
         TIMEOUT_RESET = 100,
+    }
+
+    /*
+     * Spi defines
+     */
+    #[derive(Debug, Clone, Copy)]
+    pub enum SPIIO {
+        SPI_READ = 0x00,
+        SPI_WRITE = 0x80,
     }
 }
 
