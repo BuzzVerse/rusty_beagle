@@ -111,11 +111,11 @@ impl LoRa {
     #[cfg(target_arch = "arm")]
     pub fn reset(&mut self) -> Result<()> {
         // pull NRST pin low for 5 ms
-        self.reset_pin.set_values(0x00_u8).context("While setting reset_pin low: ")?;
+        self.reset_pin.set_values(0x00_u8).context("LoRa reset: while setting reset_pin low: ")?;
 
         Self::sleep(5);
 
-        self.reset_pin.set_values(0x01_u8).context("While setting reset_pin high: ")?;
+        self.reset_pin.set_values(0x01_u8).context("LoRa reset: while setting reset_pin high: ")?;
 
         // wait 10 ms before using the chip
         Self::sleep(10);
