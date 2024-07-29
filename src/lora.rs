@@ -5,6 +5,7 @@ use std::thread::sleep;
 // TODO delete later
 use crate::defines::*;
 use crate::{GPIOPin, LoRaConfig, Mode};
+use crate::config::RadioConfig;
 use gpiod::{Lines, Output, AsValuesMut, Chip, Masked, Options};
 use log::{debug, error, info, trace, warn};
 use spidev::{SpiModeFlags, Spidev, SpidevOptions, SpidevTransfer};
@@ -209,6 +210,16 @@ impl LoRa {
         self.spi_write_register(register, value | crc_on)
             .context("Function - enable_crc: ")?;
         Self::sleep(10);
+
+        Ok(())
+    }
+
+    pub fn config_radio(&mut self, radio_config: RadioConfig) -> Result<()> {
+        self.set_frequency(433_000_000)?;
+        self.set_bandwidth(radio_config.bandwidth)?;
+        self.set_coding_rate(radio_config.coding_rate)?;
+        self.set_spreading_factor(radio_config.spreading_factor)?;
+        self.enable_crc()?;
 
         Ok(())
     }
