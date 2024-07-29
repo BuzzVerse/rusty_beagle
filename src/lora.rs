@@ -132,6 +132,13 @@ impl LoRa {
         Ok(())
     }
 
+    pub fn transmit_mode(&mut self) -> Result<()> {
+        self.spi_write_register(LoRaRegister::OP_MODE, LoRaMode::LONG_RANGE as u8 | LoRaMode::TX as u8)
+            .context("Function - transmit_mode: ")?;
+        Self::sleep(10);
+        Ok(())
+    }
+
     pub fn set_tx_power(&mut self, level: u8) -> Result<()> {
         let correct_level = match level {
             0 | 1 => 2,
