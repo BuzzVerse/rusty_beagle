@@ -23,8 +23,8 @@ pub struct LoRa {
 }
 
 impl LoRa {
-    pub fn sleep(ms: u32) {
-        sleep(time::Duration::from_millis(ms.into()));
+    pub fn sleep(ms: u64) {
+        sleep(time::Duration::from_millis(ms));
     }
 
     #[cfg(target_arch = "x86_64")]
@@ -151,10 +151,67 @@ impl LoRa {
             .context("Function - set_frequency ")?;
         self.spi_write_register(LoRaRegister::FRF_LSB, frf as u8)
             .context("Function - set_frequency ")?;
+        Self::sleep(10);
 
         Ok(())
     }
 
+    pub fn set_bandwidth(&mut self, bandwidth: Bandwidth) -> Result<()> {
+        let mut value = 0x00;
+        let register = LoRaRegister::MODEM_CONFIG_1;
+        self.spi_read_register(register, &mut value)
+            .context("Function - set_bandwidth: ")?;
+
+        let mask = 0x0f;
+        self.spi_write_register(register, (value & mask) | ((bandwidth as u8) << 4))
+            .context("Function - set_bandwidth: ")?;
+        Self::sleep(10);
+
+        Ok(())
+    }
+
+    pub fn set_coding_rate(&mut self, coding_rate: CodingRate) -> Result<()> {
+        let mut value = 0x00;
+        let register = LoRaRegister::MODEM_CONFIG_1;
+        self.spi_read_register(register, &mut value)
+            .context("Function - set_coding_rate: ")?;
+
+        let mask = 0xf1;
+        self.spi_write_register(register, (value & mask) | ((coding_rate as u8) << 1))
+            .context("Function - set_coding_rate: ")?;
+        Self::sleep(10);
+
+        Ok(())
+    }
+
+    pub fn set_spreading_factor(&mut self, spreading_factor: SpreadingFactor) -> Result<()> {
+        let mut value = 0x00;
+        let register = LoRaRegister::MODEM_CONFIG_2;
+        self.spi_read_register(register, &mut value)
+            .context("Function - set_spreading_factor: ")?;
+
+        let reg_mask = 0x0f;
+        let val_mask = 0xf0;
+        self.spi_write_register(register, (value & reg_mask) | (((spreading_factor as u8) << 4) & val_mask))
+            .context("Function - set_spreading_factor: ")?;
+        Self::sleep(10);
+
+        Ok(())
+    }
+
+    pub fn enable_crc(&mut self) -> Result<()> {
+        let mut value = 0x00;
+        let crc_on = 0x04;
+        let register = LoRaRegister::MODEM_CONFIG_2;
+        self.spi_read_register(register, &mut value)
+            .context("Function - enable_crc: ")?;
+
+        self.spi_write_register(register, value | crc_on)
+            .context("Function - enable_crc: ")?;
+        Self::sleep(10);
+
+        Ok(())
+    }
 
     #[cfg(target_arch = "arm")]
     pub fn reset(&mut self) -> Result<()> {

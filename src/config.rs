@@ -2,6 +2,7 @@ use log::{error, info};
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::{fs, process};
+use crate::defines::{CodingRate, SpreadingFactor, Bandwidth};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
@@ -69,9 +70,18 @@ pub struct SPIConfig {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct LoRaConfig {
-    pub spi_config: SPIConfig,
-    pub reset_gpio: GPIOPinNumber,
     pub mode: Mode,
+    pub reset_gpio: GPIOPinNumber,
+    pub spi_config: SPIConfig,
+    pub radio_config: RadioConfig,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct RadioConfig {
+    pub bandwidth: Bandwidth,
+    pub coding_rate: CodingRate,
+    pub spreading_factor: SpreadingFactor,
+
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

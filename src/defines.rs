@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 /*
  * Register definitions
  */
@@ -94,5 +95,42 @@ pub enum LoRaDelay {
 pub enum SPIIO {
     SPI_READ = 0x00,
     SPI_WRITE = 0x80,
+}
+
+#[allow(non_camel_case_types)]
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+pub enum Bandwidth {
+    _7_8kHz   = 0x00,
+    _10_4kHz  = 0x10,
+    _15_6kHz  = 0x20,
+    _20_8kHz  = 0x30,
+    _31_25kHz = 0x40,
+    _41_7kHz  = 0x50,
+    _62_5kHz  = 0x60,
+    _125kHz   = 0x70,
+    _250kHz   = 0x80,
+    _500kHz   = 0x90,
+}
+
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+pub enum CodingRate {
+    _4_5 = 0b0010,
+    _4_6 = 0b0100,
+    _4_7 = 0b0110,
+    _4_8 = 0b1000,
+}
+
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+pub enum SpreadingFactor {
+    // _64   = 6, //TODO implement later
+    _128  = 7,
+    _256  = 8,
+    _512  = 9,
+    _1024 = 10,
+    _2048 = 11,
+    _4096 = 12,
 }
 
