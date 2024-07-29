@@ -3,7 +3,7 @@ use core::time;
 use std::thread::sleep;
 
 // TODO delete later
-use crate::defines::{api_defines::API_Status, lora_defines::*};
+use crate::defines::*;
 use crate::{GPIOPin, LoRaConfig, Mode};
 use gpiod::{Lines, Output, AsValuesMut, Chip, Masked, Options};
 use log::{debug, error, info, trace, warn};
