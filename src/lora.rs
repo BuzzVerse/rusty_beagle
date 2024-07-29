@@ -34,25 +34,25 @@ impl LoRa {
     }
 
     #[cfg(target_arch = "x86_64")]
-    pub fn spi_read_register(&mut self, register: LoRaRegister, value: &mut u8) -> API_Status {
+    pub fn spi_read_register(&mut self, register: LoRaRegister, value: &mut u8) -> Result<()> {
         *value = self.mock_registers[register as usize];
-        API_Status::API_OK
+        Ok(())
     }
 
     #[cfg(target_arch = "x86_64")]
-    pub fn spi_write_register(&mut self, register: LoRaRegister, value: u8) -> API_Status {
+    pub fn spi_write_register(&mut self, register: LoRaRegister, value: u8) -> Result<()> {
         self.mock_registers[register as usize] = value;
-        API_Status::API_OK
+        Ok(())
     }
 
     #[cfg(target_arch = "x86_64")]
-    pub fn reset(&mut self) -> API_Status {
+    pub fn reset(&mut self) -> Result<()> {
         self.mock_registers = [1; 112];
 
         // wait for 10 ms before using the chip
-        std::thread::sleep(std::time::Duration::from_millis(10));
+        Self::sleep(10);
 
-        API_Status::API_OK
+        Ok(())
     }
 
     #[cfg(target_arch = "arm")]
