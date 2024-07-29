@@ -28,7 +28,7 @@ fn main() {
 
     let config = Config::from_file();
 
-    let mut lora = match LoRa::from_config(config.lora_config) {
+    let mut lora = match LoRa::from_config(&config.lora_config) {
         Ok(lora) => {
             info!("LoRa object created successfully.");
             lora
@@ -41,6 +41,8 @@ fn main() {
     };
 
     handle_error!(lora.reset());
+
+    println!("{:?}", config.lora_config.mode);
 
     let mut value = 0x00;
     handle_error!(lora.spi_read_register(LoRaRegister::OP_MODE, &mut value));

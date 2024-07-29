@@ -15,5 +15,6 @@ Config(
             spi_mode: SPI_MODE_0,
         ),
         reset_gpio: GPIO_66,
+        mode: TX,
     ),
 )

@@ -4,7 +4,7 @@ use std::thread::sleep;
 
 // TODO delete later
 use crate::defines::{api_defines::API_Status, lora_defines::*};
-use crate::{GPIOPin, LoRaConfig};
+use crate::{GPIOPin, LoRaConfig, Mode};
 use gpiod::{Lines, Output, AsValuesMut, Chip, Masked, Options};
 use log::{debug, error, info, trace, warn};
 use spidev::{SpiModeFlags, Spidev, SpidevOptions, SpidevTransfer};
@@ -14,7 +14,7 @@ use anyhow::{anyhow, Context, Result};
 pub struct LoRa {
     spidev: Spidev,
     reset_pin: Lines<Output>,
-    //dio0: SysFsGpioInput, // used to read RX_DONE and TX_DONE
+    mode: Mode,
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -28,7 +28,7 @@ impl LoRa {
     }
 
     #[cfg(target_arch = "x86_64")]
-    pub fn from_config(_lora_config: LoRaConfig) -> Result<LoRa> {
+    pub fn from_config(_lora_config: &LoRaConfig) -> Result<LoRa> {
         let mock_registers = [1; 112];
         Ok(LoRa { mock_registers })
     }
@@ -56,9 +56,9 @@ impl LoRa {
     }
 
     #[cfg(target_arch = "arm")]
-    pub fn from_config(lora_config: LoRaConfig) -> Result<LoRa> {
-        let local_spi_config = lora_config.spi_config;
-        let mut spidev = Spidev::open(local_spi_config.spidev_path)?;
+    pub fn from_config(lora_config: &LoRaConfig) -> Result<LoRa> {
+        let local_spi_config = lora_config.spi_config.clone();
+        let mut spidev = Spidev::open(local_spi_config.spidev_path.clone())?;
 
         let spi_options = SpidevOptions::new()
             .bits_per_word(local_spi_config.bits_per_word)
@@ -78,7 +78,9 @@ impl LoRa {
             Err(e) => return Err(anyhow!("While requesting gpio line got {:#?}", e))
         };
 
-        Ok(LoRa { spidev, reset_pin })
+        let mode = lora_config.mode.clone();
+
+        Ok(LoRa { spidev, reset_pin, mode })
     }
 
     #[cfg(target_arch = "arm")]

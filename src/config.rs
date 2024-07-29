@@ -49,7 +49,7 @@ impl Config {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct MQTTConfig {
     pub ip: String,
     pub port: String,
@@ -58,7 +58,7 @@ pub struct MQTTConfig {
     pub topic: String,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct SPIConfig {
     pub spidev_path: String,
     pub bits_per_word: u8,
@@ -67,10 +67,17 @@ pub struct SPIConfig {
     pub spi_mode: SpiFlags,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct LoRaConfig {
     pub spi_config: SPIConfig,
     pub reset_gpio: GPIOPinNumber,
+    pub mode: Mode,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub enum Mode {
+    RX,
+    TX,
 }
 
 #[allow(non_camel_case_types)]
