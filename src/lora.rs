@@ -108,6 +108,52 @@ impl LoRa {
         }
     }
 
+    pub fn standby_mode(&mut self) -> Result<()> {
+        self.spi_write_register(LoRaRegister::OP_MODE, LoRaMode::LONG_RANGE as u8 | LoRaMode::STDBY as u8)
+            .context("Function - standby_mode: ")?;
+        Self::sleep(10);
+        Ok(())
+    }
+
+    pub fn sleep_mode(&mut self) -> Result<()> {
+        self.spi_write_register(LoRaRegister::OP_MODE, LoRaMode::LONG_RANGE as u8 | LoRaMode::SLEEP as u8)
+            .context("Function - sleep_mode: ")?;
+        Self::sleep(10);
+        Ok(())
+    }
+
+    pub fn receive_mode(&mut self) -> Result<()> {
+        self.spi_write_register(LoRaRegister::OP_MODE, LoRaMode::LONG_RANGE as u8 | LoRaMode::RX_CONTINUOUS as u8)
+            .context("Function - recieve_mode: ")?;
+        Self::sleep(10);
+        Ok(())
+    }
+
+    pub fn set_tx_power(&mut self, level: u8) -> Result<()> {
+        let correct_level = match level {
+            0 | 1 => 2,
+            2..=17 => level,
+            _ => 17,
+        };
+        self.spi_write_register(LoRaRegister::PA_CONFIG, PAConfiguration::PA_BOOST as u8 | correct_level)
+            .context("Function - set_tx_power: ")?;
+        Self::sleep(10);
+        Ok(())
+    }
+
+    pub fn set_frequency(&mut self, frequency: u64) -> Result<()> {
+        let frf = (frequency << 19) / 32_000_000;
+        self.spi_write_register(LoRaRegister::FRF_MSB, (frf >> 16) as u8)
+            .context("Function - set_frequency ")?;
+        self.spi_write_register(LoRaRegister::FRF_MID, (frf >> 8) as u8)
+            .context("Function - set_frequency ")?;
+        self.spi_write_register(LoRaRegister::FRF_LSB, frf as u8)
+            .context("Function - set_frequency ")?;
+
+        Ok(())
+    }
+
+
     #[cfg(target_arch = "arm")]
     pub fn reset(&mut self) -> Result<()> {
         // pull NRST pin low for 5 ms
