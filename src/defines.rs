@@ -127,7 +127,7 @@ pub enum CodingRate {
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 pub enum SpreadingFactor {
-    // _64   = 6, //TODO implement later
+    // _64   = 6, //TODO implement later, related issue [RB-11]
     spreading_factor_128  = 7,
     spreading_factor_256  = 8,
     spreading_factor_512  = 9,
