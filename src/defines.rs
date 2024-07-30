@@ -101,36 +101,38 @@ pub enum SPIIO {
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 pub enum Bandwidth {
-    _7_8kHz   = 0x00,
-    _10_4kHz  = 0x10,
-    _15_6kHz  = 0x20,
-    _20_8kHz  = 0x30,
-    _31_25kHz = 0x40,
-    _41_7kHz  = 0x50,
-    _62_5kHz  = 0x60,
-    _125kHz   = 0x70,
-    _250kHz   = 0x80,
-    _500kHz   = 0x90,
+    bandwidth_7_8kHz   = 0x00,
+    bandwidth_10_4kHz  = 0x10,
+    bandwidth_15_6kHz  = 0x20,
+    bandwidth_20_8kHz  = 0x30,
+    bandwidth_31_25kHz = 0x40,
+    bandwidth_41_7kHz  = 0x50,
+    bandwidth_62_5kHz  = 0x60,
+    bandwidth_125kHz   = 0x70,
+    bandwidth_250kHz   = 0x80,
+    bandwidth_500kHz   = 0x90,
 }
 
+#[allow(non_camel_case_types)]
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 pub enum CodingRate {
-    _4_5 = 0b0010,
-    _4_6 = 0b0100,
-    _4_7 = 0b0110,
-    _4_8 = 0b1000,
+    coding_4_5 = 0b0010,
+    coding_4_6 = 0b0100,
+    coding_4_7 = 0b0110,
+    coding_4_8 = 0b1000,
 }
 
+#[allow(non_camel_case_types)]
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 pub enum SpreadingFactor {
     // _64   = 6, //TODO implement later
-    _128  = 7,
-    _256  = 8,
-    _512  = 9,
-    _1024 = 10,
-    _2048 = 11,
-    _4096 = 12,
+    spreading_factor_128  = 7,
+    spreading_factor_256  = 8,
+    spreading_factor_512  = 9,
+    spreading_factor_1024 = 10,
+    spreading_factor_2048 = 11,
+    spreading_factor_4096 = 12,
 }
 

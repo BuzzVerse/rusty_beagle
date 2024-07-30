@@ -17,9 +17,9 @@ Config(
             spi_mode: SPI_MODE_0,
         ),
         radio_config: RadioConfig(
-            bandwidth: _31_25kHz,
-            coding_rate: _4_8,
-            spreading_factor: _4096,
+            bandwidth: bandwidth_31_25kHz,
+            coding_rate: coding_rate_4_8,
+            spreading_factor: spreading_factor_4096,
         ),
     ),
 )
