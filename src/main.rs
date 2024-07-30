@@ -102,7 +102,6 @@ fn main() {
             let mut lna = 0x00;
             handle_error!(lora.spi_read_register(LoRaRegister::LNA, &mut lna));
             handle_error!(lora.spi_write_register(LoRaRegister::LNA, lna | 0x03));
-            handle_error!(lora.set_tx_power(17));
 
             handle_error!(lora.standby_mode());
 

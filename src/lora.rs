@@ -227,6 +227,7 @@ impl LoRa {
         self.set_coding_rate(radio_config.coding_rate)?;
         self.set_spreading_factor(radio_config.spreading_factor)?;
         self.enable_crc()?;
+        self.set_tx_power(radio_config.tx_power)?;
 
         Ok(())
     }

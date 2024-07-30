@@ -18,8 +18,9 @@ Config(
         ),
         radio_config: RadioConfig(
             bandwidth: bandwidth_31_25kHz,
-            coding_rate: coding_rate_4_8,
+            coding_rate: coding_4_8,
             spreading_factor: spreading_factor_4096,
+            tx_power: 17,
         ),
     ),
 )

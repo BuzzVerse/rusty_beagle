@@ -81,7 +81,7 @@ pub struct RadioConfig {
     pub bandwidth: Bandwidth,
     pub coding_rate: CodingRate,
     pub spreading_factor: SpreadingFactor,
-
+    pub tx_power: u8,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
