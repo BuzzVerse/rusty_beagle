@@ -8,9 +8,7 @@ extern crate log;
 pub use crate::config::*;
 pub use crate::defines::*;
 pub use crate::logging::start_logger;
-use anyhow::{anyhow, Context, Result};
-#[allow(unused_imports)] // TODO delete later
-use log::{debug, error, info, trace, warn};
+use log::{error, info};
 use lora::LoRa;
 
 macro_rules! handle_error {

@@ -2,7 +2,6 @@
 use core::time;
 use std::thread::sleep;
 
-// TODO delete later
 use crate::defines::*;
 use crate::{GPIOPin, LoRaConfig, Mode};
 use crate::config::RadioConfig;
