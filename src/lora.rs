@@ -98,6 +98,15 @@ impl LoRa {
         }
     }
 
+    pub fn read_fifo(&mut self, buffer: &mut Vec<u8>) -> Result<()> {
+        for value in buffer {
+            self.spi_read_register(LoRaRegister::FIFO, value)
+                .context("Function - read_fifo: ")?;
+        }
+
+        Ok(())
+    }
+
     #[cfg(target_arch = "arm")]
     pub fn spi_write_register(&mut self, register: LoRaRegister, value: u8) -> Result<()> {
         let tx_buf: [u8; 2] = [register as u8 | SPIIO::SPI_WRITE as u8, value];
@@ -108,6 +117,15 @@ impl LoRa {
             Ok(()) => Ok(()),
             Err(e) => Err(anyhow!("While writing to {:#?} got {:#?}", register, e.to_string())),
         }
+    }
+
+    pub fn write_fifo(&mut self, buffer: Vec<u8>) -> Result<()> {
+        for value in buffer {
+            self.spi_write_register(LoRaRegister::FIFO, value)
+                .context("Function - write_fifo: ")?;
+        }
+
+        Ok(())
     }
 
     pub fn standby_mode(&mut self) -> Result<()> {
@@ -253,18 +271,21 @@ impl LoRa {
         Ok(())
     }
 
-    pub fn receive_packet(&mut self, received_value: &mut u8, return_length: &mut u8, crc_error: &mut bool) -> Result<()> {
+    pub fn receive_packet(&mut self, crc_error: &mut bool) -> Result<Vec<u8>> {
         let mut irq: u8 = 0x00;
         let mut has_received = false;
-
-        self.receive_mode()?;
-
+        let mut return_length = 0;
+        self.receive_mode()
+            .context("Function - receive_packet: ")?;
         loop {
-            self.has_received(&mut has_received)?;
-            self.spi_read_register(LoRaRegister::IRQ_FLAGS, &mut irq)?;
+            self.has_received(&mut has_received)
+                .context("Function - receive_packet: ")?;
+            self.spi_read_register(LoRaRegister::IRQ_FLAGS, &mut irq)
+                .context("Function - receive_packet: ")?;
             if has_received {
                 let mut has_crc_error = false;
-                self.has_crc_error(&mut has_crc_error)?;
+                self.has_crc_error(&mut has_crc_error)
+                    .context("Function - receive_packet: ")?;
                 if has_crc_error {
                     *crc_error = true;
                 }
@@ -274,28 +295,38 @@ impl LoRa {
             }
         }
 
-        self.standby_mode()?;
+        self.standby_mode()
+            .context("Function - receive_packet: ")?;
 
-        self.spi_read_register(LoRaRegister::RX_NB_BYTES, return_length)?;
+        self.spi_read_register(LoRaRegister::RX_NB_BYTES, &mut return_length)
+            .context("Function - receive_packet: ")?;
+        let mut buffer: Vec<u8> = vec![0; return_length.into()];
 
         let mut received_address = 0x00;
-        self.spi_read_register(LoRaRegister::FIFO_RX_CURRENT_ADDR, &mut received_address)?;
-        self.spi_write_register(LoRaRegister::FIFO_ADDR_PTR, received_address)?;
+        self.spi_read_register(LoRaRegister::FIFO_RX_CURRENT_ADDR, &mut received_address)
+            .context("Function - receive_packet: ")?;
+        self.spi_write_register(LoRaRegister::FIFO_ADDR_PTR, received_address)
+            .context("Function - receive_packet: ")?;
 
-        self.spi_read_register(LoRaRegister::FIFO, received_value)?;
+        self.read_fifo(&mut buffer)
+            .context("Function - receive_packet: ")?;
 
-        Ok(())
+        Ok(buffer)
     }
 
-    pub fn send_packet(&mut self, packet: u8) -> Result<()> {
+    pub fn send_packet(&mut self, buffer: Vec<u8>) -> Result<()> {
         // TODO rework to send buffers instead of single bytes, related issue: [RB-8]
-        let mut tx_address = 0x00;
-        self.spi_read_register(LoRaRegister::FIFO_TX_BASE_ADDR, &mut tx_address)?;
-        self.spi_write_register(LoRaRegister::FIFO_ADDR_PTR, tx_address)?;
+        let mut tx_address = 0x00; 
+        self.spi_read_register(LoRaRegister::FIFO_TX_BASE_ADDR, &mut tx_address)
+            .context("Function - send_packet: ")?;
+        self.spi_write_register(LoRaRegister::FIFO_ADDR_PTR, tx_address)
+            .context("Function - send_packet: ")?;
 
-        self.spi_write_register(LoRaRegister::PAYLOAD_LENGTH, 0x01)?;
+        self.spi_write_register(LoRaRegister::PAYLOAD_LENGTH, buffer.len() as u8)
+            .context("Function - send_packet: ")?;
 
-        self.spi_write_register(LoRaRegister::FIFO, packet)?;
+        self.write_fifo(buffer)
+            .context("Function - send_packet: ")?;
 
         // send_packet()
         let mut irq: u8 = 0x00;
@@ -303,12 +334,16 @@ impl LoRa {
         self.transmit_mode()?;
 
         loop {
-            self.spi_read_register(LoRaRegister::IRQ_FLAGS, &mut irq)?;
+            self.spi_read_register(LoRaRegister::IRQ_FLAGS, &mut irq)
+                .context("Function - send_packet: ")?;
             if irq & IRQMask::IRQ_TX_DONE_MASK as u8 == IRQMask::IRQ_TX_DONE_MASK as u8 {
                 println!("Packet sent: IRQMask: {:#04x}", irq);
                 break;
             }
         }
+
+        self.sleep_mode()
+            .context("Function - send_packet: ")?;
 
         Ok(())
     }

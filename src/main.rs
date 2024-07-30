@@ -51,16 +51,21 @@ fn main() {
             handle_error!(lora.spi_read_register(LoRaRegister::OP_MODE, &mut value));
             println!("value: {:#04x} (expected 0x80)", value);
 
-            let mut received_value = 0x00;
-            let mut return_length = 0x00;
             let mut crc_error = false;
 
-            handle_error!(lora.receive_packet(&mut received_value, &mut return_length, &mut crc_error));
+            let received_buffer = match lora.receive_packet(&mut crc_error) {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("{:?}", e);
+                    error!("{:?}", e);
+                    std::process::exit(-1);
+                }
+            };
 
             if crc_error {
                 println!("CRC Error");
             }
-            println!("Received {:#04x} byte(s): {:#04x}", return_length, received_value);  
+            println!("Received {:#?} byte(s): {:#?}", received_buffer.len(), received_buffer);  
         },
         config::Mode::TX => {
             println!("[MODE]: TX");
@@ -76,7 +81,7 @@ fn main() {
 
             handle_error!(lora.standby_mode());
 
-            let packet = 0xAB;
+            let packet = String::from("BUZZVERSE").as_bytes().to_vec();
 
             handle_error!(lora.send_packet(packet));
         },
