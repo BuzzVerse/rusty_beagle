@@ -51,38 +51,11 @@ fn main() {
             handle_error!(lora.spi_read_register(LoRaRegister::OP_MODE, &mut value));
             println!("value: {:#04x} (expected 0x80)", value);
 
-            // receive()
-            let mut irq: u8 = 0x00;
-            let mut return_length: u8 = 0x00;
-            let mut crc_error: bool = false;
-
-            handle_error!(lora.receive_mode());
-
-            handle_error!(lora.spi_read_register(LoRaRegister::OP_MODE, &mut value));
-            println!("value: {:#04x} (expected 0x85)", value); 
-
-            loop {
-                // has_received()
-                handle_error!(lora.spi_read_register(LoRaRegister::IRQ_FLAGS, &mut irq));
-                if irq & IRQMask::IRQ_RX_DONE_MASK as u8 == IRQMask::IRQ_RX_DONE_MASK as u8 {
-                    if irq & IRQMask::IRQ_PAYLOAD_CRC_ERROR as u8 == IRQMask::IRQ_PAYLOAD_CRC_ERROR as u8 {
-                        crc_error = true;
-                    }
-                    println!("Packet received: IRQMask: {:#04x}", irq);
-                    break;
-                }
-            }
-
-            handle_error!(lora.standby_mode());
-
-            handle_error!(lora.spi_read_register(LoRaRegister::RX_NB_BYTES, &mut return_length));
-
-            let mut received_address = 0x00;
-            handle_error!(lora.spi_read_register(LoRaRegister::FIFO_RX_CURRENT_ADDR, &mut received_address));
-            handle_error!(lora.spi_write_register(LoRaRegister::FIFO_ADDR_PTR, received_address));
-
             let mut received_value = 0x00;
-            handle_error!(lora.spi_read_register(LoRaRegister::FIFO, &mut received_value));
+            let mut return_length = 0x00;
+            let mut crc_error = false;
+
+            handle_error!(lora.receive_packet(&mut received_value, &mut return_length, &mut crc_error));
 
             if crc_error {
                 println!("CRC Error");

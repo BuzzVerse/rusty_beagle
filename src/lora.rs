@@ -231,6 +231,62 @@ impl LoRa {
         Ok(())
     }
 
+    fn has_received(&mut self, has_received: &mut bool) -> Result<()> {
+        let mut irq: u8 = 0x00;
+
+        self.spi_read_register(LoRaRegister::IRQ_FLAGS, &mut irq)?;
+        if irq & IRQMask::IRQ_RX_DONE_MASK as u8 == IRQMask::IRQ_RX_DONE_MASK as u8 {
+            *has_received = true;
+        }
+
+        Ok(())
+    }
+
+    fn has_crc_error(&mut self, has_crc_error: &mut bool) -> Result<()> {
+        let mut irq: u8 = 0x00;
+
+        self.spi_read_register(LoRaRegister::IRQ_FLAGS, &mut irq)?;
+        if irq & IRQMask::IRQ_PAYLOAD_CRC_ERROR as u8 == IRQMask::IRQ_PAYLOAD_CRC_ERROR as u8 {
+            *has_crc_error = true;
+        }
+
+        Ok(())
+    }
+
+    pub fn receive_packet(&mut self, received_value: &mut u8, return_length: &mut u8, crc_error: &mut bool) -> Result<()> {
+        let mut irq: u8 = 0x00;
+        let mut has_received = false;
+
+        self.receive_mode()?;
+
+        loop {
+            self.has_received(&mut has_received)?;
+            self.spi_read_register(LoRaRegister::IRQ_FLAGS, &mut irq)?;
+            if has_received {
+                let mut has_crc_error = false;
+                self.has_crc_error(&mut has_crc_error)?;
+                if has_crc_error {
+                    *crc_error = true;
+                }
+
+                println!("Packet received: IRQMask: {:#04x}", irq);
+                break;
+            }
+        }
+
+        self.standby_mode()?;
+
+        self.spi_read_register(LoRaRegister::RX_NB_BYTES, return_length)?;
+
+        let mut received_address = 0x00;
+        self.spi_read_register(LoRaRegister::FIFO_RX_CURRENT_ADDR, &mut received_address)?;
+        self.spi_write_register(LoRaRegister::FIFO_ADDR_PTR, received_address)?;
+
+        self.spi_read_register(LoRaRegister::FIFO, received_value)?;
+
+        Ok(())
+    }
+
     #[cfg(target_arch = "arm")]
     pub fn reset(&mut self) -> Result<()> {
         // pull NRST pin low for 5 ms
