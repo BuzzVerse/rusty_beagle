@@ -77,28 +77,8 @@ fn main() {
             handle_error!(lora.standby_mode());
 
             let packet = 0xAB;
-            let mut tx_address = 0x00;
-            handle_error!(lora.spi_read_register(LoRaRegister::FIFO_TX_BASE_ADDR, &mut tx_address));
-            handle_error!(lora.spi_write_register(LoRaRegister::FIFO_ADDR_PTR, tx_address));
 
-            handle_error!(lora.spi_write_register(LoRaRegister::PAYLOAD_LENGTH, 0x01));
-
-            handle_error!(lora.spi_write_register(LoRaRegister::FIFO, packet));
-
-            // send_packet()
-            let mut irq: u8 = 0x00;
-
-            handle_error!(lora.transmit_mode());
-            handle_error!(lora.spi_read_register(LoRaRegister::OP_MODE, &mut value));
-            println!("value: {:#04x} (expected 0x83)", value); 
-
-            loop {
-                handle_error!(lora.spi_read_register(LoRaRegister::IRQ_FLAGS, &mut irq));
-                if irq & IRQMask::IRQ_TX_DONE_MASK as u8 == IRQMask::IRQ_TX_DONE_MASK as u8 {
-                    println!("Packet sent: IRQMask: {:#04x}", irq);
-                    break;
-                }
-            }
+            handle_error!(lora.send_packet(packet));
         },
     }
 

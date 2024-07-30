@@ -287,6 +287,32 @@ impl LoRa {
         Ok(())
     }
 
+    pub fn send_packet(&mut self, packet: u8) -> Result<()> {
+        // TODO rework to send buffers instead of single bytes, related issue: [RB-8]
+        let mut tx_address = 0x00;
+        self.spi_read_register(LoRaRegister::FIFO_TX_BASE_ADDR, &mut tx_address)?;
+        self.spi_write_register(LoRaRegister::FIFO_ADDR_PTR, tx_address)?;
+
+        self.spi_write_register(LoRaRegister::PAYLOAD_LENGTH, 0x01)?;
+
+        self.spi_write_register(LoRaRegister::FIFO, packet)?;
+
+        // send_packet()
+        let mut irq: u8 = 0x00;
+
+        self.transmit_mode()?;
+
+        loop {
+            self.spi_read_register(LoRaRegister::IRQ_FLAGS, &mut irq)?;
+            if irq & IRQMask::IRQ_TX_DONE_MASK as u8 == IRQMask::IRQ_TX_DONE_MASK as u8 {
+                println!("Packet sent: IRQMask: {:#04x}", irq);
+                break;
+            }
+        }
+
+        Ok(())
+    }
+
     #[cfg(target_arch = "arm")]
     pub fn reset(&mut self) -> Result<()> {
         // pull NRST pin low for 5 ms
