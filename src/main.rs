@@ -43,7 +43,7 @@ fn main() {
     handle_error!(lora.reset());
     handle_error!(lora.sleep_mode());
 
-    match config.lora_config.mode {
+    match lora.mode {
         config::Mode::RX => {
             println!("[MODE]: RX");
 

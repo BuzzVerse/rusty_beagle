@@ -15,7 +15,7 @@ use anyhow::{anyhow, Context, Result};
 pub struct LoRa {
     spidev: Spidev,
     reset_pin: Lines<Output>,
-    mode: Mode,
+    pub mode: Mode,
 }
 
 #[cfg(target_arch = "x86_64")]
