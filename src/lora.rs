@@ -56,7 +56,7 @@ impl LoRa {
     }
 
     #[cfg(target_arch = "arm")]
-    pub fn from_config(lora_config: &LoRaConfig) -> Result<LoRa> {
+    pub fn from_config(lora_config: LoRaConfig) -> Result<LoRa> {
         let local_spi_config = lora_config.spi_config.clone();
         let mut spidev = Spidev::open(local_spi_config.spidev_path.clone())?;
 
@@ -80,7 +80,10 @@ impl LoRa {
 
         let mode = lora_config.mode.clone();
 
-        Ok(LoRa { spidev, reset_pin, mode })
+        let mut lora = LoRa { spidev, reset_pin, mode };
+        lora.config_radio(lora_config.radio_config);
+
+        Ok(lora)
     }
 
     #[cfg(target_arch = "arm")]
@@ -347,7 +350,7 @@ impl LoRa {
 
         Ok(())
     }
-
+    
     #[cfg(target_arch = "arm")]
     pub fn reset(&mut self) -> Result<()> {
         // pull NRST pin low for 5 ms

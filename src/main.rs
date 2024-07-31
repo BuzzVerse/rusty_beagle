@@ -30,7 +30,7 @@ fn main() {
 
     let config = Config::from_file();
 
-    let mut lora = match LoRa::from_config(&config.lora_config) {
+    let mut lora = match LoRa::from_config(config.lora_config) {
         Ok(lora) => {
             info!("LoRa object created successfully.");
             lora
@@ -48,8 +48,6 @@ fn main() {
     match lora.mode {
         config::Mode::RX => {
             println!("[MODE]: RX");
-
-            handle_error!(lora.config_radio(config.lora_config.radio_config));
 
             let mut value = 0x00;
             handle_error!(lora.spi_read_register(LoRaRegister::OP_MODE, &mut value));
@@ -78,7 +76,6 @@ fn main() {
             handle_error!(lora.spi_read_register(LoRaRegister::OP_MODE, &mut value));
             println!("value: {:#04x} (expected 0x80)", value);
 
-            handle_error!(lora.config_radio(config.lora_config.radio_config));
             let mut lna = 0x00;
             handle_error!(lora.spi_read_register(LoRaRegister::LNA, &mut lna));
             handle_error!(lora.spi_write_register(LoRaRegister::LNA, lna | 0x03));
