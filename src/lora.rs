@@ -20,6 +20,7 @@ pub struct LoRa {
 #[cfg(target_arch = "x86_64")]
 pub struct LoRa {
     mock_registers: [u8; 112],
+    pub mode: Mode,
 }
 
 impl LoRa {
@@ -30,7 +31,8 @@ impl LoRa {
     #[cfg(target_arch = "x86_64")]
     pub fn from_config(_lora_config: &LoRaConfig) -> Result<LoRa> {
         let mock_registers = [1; 112];
-        Ok(LoRa { mock_registers })
+        let mode = _lora_config.mode.clone();
+        Ok(LoRa { mock_registers, mode })
     }
 
     #[cfg(target_arch = "x86_64")]
