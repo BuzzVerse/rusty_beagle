@@ -81,7 +81,7 @@ impl LoRa {
         let mode = lora_config.mode.clone();
 
         let mut lora = LoRa { spidev, reset_pin, mode };
-        lora.config_radio(lora_config.radio_config);
+        lora.config_radio(lora_config.radio_config)?;
 
         Ok(lora)
     }
@@ -350,6 +350,67 @@ impl LoRa {
 
         Ok(())
     }
+
+    pub fn start(&mut self) -> Result<()> {
+        self.reset()
+            .context("start: ")?;
+        self.sleep_mode()
+            .context("start: ")?;
+
+        match self.mode {
+            Mode::RX => {
+                println!("[MODE]: RX");
+
+                let mut value = 0x00;
+                self.spi_read_register(LoRaRegister::OP_MODE, &mut value)
+                    .context("start: ")?;
+                println!("value: {:#04x} (expected 0x80)", value);
+
+                let mut crc_error = false;
+
+                let received_buffer = match self.receive_packet(&mut crc_error) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        eprintln!("{:?}", e);
+                        error!("{:?}", e);
+                        std::process::exit(-1);
+                    }
+                };
+
+                if crc_error {
+                    println!("CRC Error");
+                }
+                println!("Received {:#?} byte(s): {:#?}", received_buffer.len(), received_buffer);  
+            },
+            Mode::TX => {
+                println!("[MODE]: TX");
+
+                let mut value = 0x00;
+                self.spi_read_register(LoRaRegister::OP_MODE, &mut value)
+                    .context("start: ")?;
+                println!("value: {:#04x} (expected 0x80)", value);
+
+                let mut lna = 0x00;
+                self.spi_read_register(LoRaRegister::LNA, &mut lna)
+                    .context("start: ")?;
+                self.spi_write_register(LoRaRegister::LNA, lna | 0x03)
+                    .context("start: ")?;
+
+                self.standby_mode()
+                    .context("start: ")?;
+
+                let packet = String::from("BUZZVERSE").as_bytes().to_vec();
+
+                self.send_packet(packet)
+                    .context("start: ")?;
+            },
+        }
+
+        self.reset()
+            .context("start: ")?;
+        Ok(())
+    }
+
     
     #[cfg(target_arch = "arm")]
     pub fn reset(&mut self) -> Result<()> {
