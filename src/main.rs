@@ -13,13 +13,17 @@ use lora::LoRa;
 
 macro_rules! handle_error {
     ($func:expr) => {
-        if let Err(e) = $func {
-            eprintln!("{:?}", e);
-            error!("{:?}", e);
-            std::process::exit(-1);
+        match $func {
+            Err(e) => {
+                eprintln!("{:?}", e);
+                error!("{:?}", e);
+                std::process::exit(-1);
+            }
+            Ok(s) => s,
         }
     };
 }
+
 
 fn main() {
     start_logger();
