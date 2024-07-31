@@ -104,7 +104,7 @@ impl LoRa {
     pub fn read_fifo(&mut self, buffer: &mut Vec<u8>) -> Result<()> {
         for value in buffer {
             self.spi_read_register(LoRaRegister::FIFO, value)
-                .context("Function - read_fifo: ")?;
+                .context("read_fifo: ")?;
         }
 
         Ok(())
@@ -125,7 +125,7 @@ impl LoRa {
     pub fn write_fifo(&mut self, buffer: Vec<u8>) -> Result<()> {
         for value in buffer {
             self.spi_write_register(LoRaRegister::FIFO, value)
-                .context("Function - write_fifo: ")?;
+                .context("write_fifo: ")?;
         }
 
         Ok(())
@@ -133,28 +133,28 @@ impl LoRa {
 
     pub fn standby_mode(&mut self) -> Result<()> {
         self.spi_write_register(LoRaRegister::OP_MODE, LoRaMode::LONG_RANGE as u8 | LoRaMode::STDBY as u8)
-            .context("Function - standby_mode: ")?;
+            .context("standby_mode: ")?;
         Self::sleep(10);
         Ok(())
     }
 
     pub fn sleep_mode(&mut self) -> Result<()> {
         self.spi_write_register(LoRaRegister::OP_MODE, LoRaMode::LONG_RANGE as u8 | LoRaMode::SLEEP as u8)
-            .context("Function - sleep_mode: ")?;
+            .context("sleep_mode: ")?;
         Self::sleep(10);
         Ok(())
     }
 
     pub fn receive_mode(&mut self) -> Result<()> {
         self.spi_write_register(LoRaRegister::OP_MODE, LoRaMode::LONG_RANGE as u8 | LoRaMode::RX_CONTINUOUS as u8)
-            .context("Function - recieve_mode: ")?;
+            .context("recieve_mode: ")?;
         Self::sleep(10);
         Ok(())
     }
 
     pub fn transmit_mode(&mut self) -> Result<()> {
         self.spi_write_register(LoRaRegister::OP_MODE, LoRaMode::LONG_RANGE as u8 | LoRaMode::TX as u8)
-            .context("Function - transmit_mode: ")?;
+            .context("transmit_mode: ")?;
         Self::sleep(10);
         Ok(())
     }
@@ -166,7 +166,7 @@ impl LoRa {
             _ => 17,
         };
         self.spi_write_register(LoRaRegister::PA_CONFIG, PAConfiguration::PA_BOOST as u8 | correct_level)
-            .context("Function - set_tx_power: ")?;
+            .context("set_tx_power: ")?;
         Self::sleep(10);
         Ok(())
     }
@@ -174,11 +174,11 @@ impl LoRa {
     pub fn set_frequency(&mut self, frequency: u64) -> Result<()> {
         let frf = (frequency << 19) / 32_000_000;
         self.spi_write_register(LoRaRegister::FRF_MSB, (frf >> 16) as u8)
-            .context("Function - set_frequency ")?;
+            .context("set_frequency ")?;
         self.spi_write_register(LoRaRegister::FRF_MID, (frf >> 8) as u8)
-            .context("Function - set_frequency ")?;
+            .context("set_frequency ")?;
         self.spi_write_register(LoRaRegister::FRF_LSB, frf as u8)
-            .context("Function - set_frequency ")?;
+            .context("set_frequency ")?;
         Self::sleep(10);
 
         Ok(())
@@ -188,11 +188,11 @@ impl LoRa {
         let mut value = 0x00;
         let register = LoRaRegister::MODEM_CONFIG_1;
         self.spi_read_register(register, &mut value)
-            .context("Function - set_bandwidth: ")?;
+            .context("set_bandwidth: ")?;
 
         let mask = 0x0f;
         self.spi_write_register(register, (value & mask) | ((bandwidth as u8) << 4))
-            .context("Function - set_bandwidth: ")?;
+            .context("set_bandwidth: ")?;
         Self::sleep(10);
 
         Ok(())
@@ -202,11 +202,11 @@ impl LoRa {
         let mut value = 0x00;
         let register = LoRaRegister::MODEM_CONFIG_1;
         self.spi_read_register(register, &mut value)
-            .context("Function - set_coding_rate: ")?;
+            .context("set_coding_rate: ")?;
 
         let mask = 0xf1;
         self.spi_write_register(register, (value & mask) | ((coding_rate as u8) << 1))
-            .context("Function - set_coding_rate: ")?;
+            .context("set_coding_rate: ")?;
         Self::sleep(10);
 
         Ok(())
@@ -216,12 +216,12 @@ impl LoRa {
         let mut value = 0x00;
         let register = LoRaRegister::MODEM_CONFIG_2;
         self.spi_read_register(register, &mut value)
-            .context("Function - set_spreading_factor: ")?;
+            .context("set_spreading_factor: ")?;
 
         let reg_mask = 0x0f;
         let val_mask = 0xf0;
         self.spi_write_register(register, (value & reg_mask) | (((spreading_factor as u8) << 4) & val_mask))
-            .context("Function - set_spreading_factor: ")?;
+            .context("set_spreading_factor: ")?;
         Self::sleep(10);
 
         Ok(())
@@ -232,10 +232,10 @@ impl LoRa {
         let crc_on = 0x04;
         let register = LoRaRegister::MODEM_CONFIG_2;
         self.spi_read_register(register, &mut value)
-            .context("Function - enable_crc: ")?;
+            .context("enable_crc: ")?;
 
         self.spi_write_register(register, value | crc_on)
-            .context("Function - enable_crc: ")?;
+            .context("enable_crc: ")?;
         Self::sleep(10);
 
         Ok(())
@@ -279,16 +279,16 @@ impl LoRa {
         let mut has_received = false;
         let mut return_length = 0;
         self.receive_mode()
-            .context("Function - receive_packet: ")?;
+            .context("receive_packet: ")?;
         loop {
             self.has_received(&mut has_received)
-                .context("Function - receive_packet: ")?;
+                .context("receive_packet: ")?;
             self.spi_read_register(LoRaRegister::IRQ_FLAGS, &mut irq)
-                .context("Function - receive_packet: ")?;
+                .context("receive_packet: ")?;
             if has_received {
                 let mut has_crc_error = false;
                 self.has_crc_error(&mut has_crc_error)
-                    .context("Function - receive_packet: ")?;
+                    .context("receive_packet: ")?;
                 if has_crc_error {
                     *crc_error = true;
                 }
@@ -299,20 +299,20 @@ impl LoRa {
         }
 
         self.standby_mode()
-            .context("Function - receive_packet: ")?;
+            .context("receive_packet: ")?;
 
         self.spi_read_register(LoRaRegister::RX_NB_BYTES, &mut return_length)
-            .context("Function - receive_packet: ")?;
+            .context("receive_packet: ")?;
         let mut buffer: Vec<u8> = vec![0; return_length.into()];
 
         let mut received_address = 0x00;
         self.spi_read_register(LoRaRegister::FIFO_RX_CURRENT_ADDR, &mut received_address)
-            .context("Function - receive_packet: ")?;
+            .context("receive_packet: ")?;
         self.spi_write_register(LoRaRegister::FIFO_ADDR_PTR, received_address)
-            .context("Function - receive_packet: ")?;
+            .context("receive_packet: ")?;
 
         self.read_fifo(&mut buffer)
-            .context("Function - receive_packet: ")?;
+            .context("receive_packet: ")?;
 
         Ok(buffer)
     }
@@ -321,15 +321,15 @@ impl LoRa {
         // TODO rework to send buffers instead of single bytes, related issue: [RB-8]
         let mut tx_address = 0x00; 
         self.spi_read_register(LoRaRegister::FIFO_TX_BASE_ADDR, &mut tx_address)
-            .context("Function - send_packet: ")?;
+            .context("send_packet: ")?;
         self.spi_write_register(LoRaRegister::FIFO_ADDR_PTR, tx_address)
-            .context("Function - send_packet: ")?;
+            .context("send_packet: ")?;
 
         self.spi_write_register(LoRaRegister::PAYLOAD_LENGTH, buffer.len() as u8)
-            .context("Function - send_packet: ")?;
+            .context("send_packet: ")?;
 
         self.write_fifo(buffer)
-            .context("Function - send_packet: ")?;
+            .context("send_packet: ")?;
 
         // send_packet()
         let mut irq: u8 = 0x00;
@@ -338,7 +338,7 @@ impl LoRa {
 
         loop {
             self.spi_read_register(LoRaRegister::IRQ_FLAGS, &mut irq)
-                .context("Function - send_packet: ")?;
+                .context("send_packet: ")?;
             if irq & IRQMask::IRQ_TX_DONE_MASK as u8 == IRQMask::IRQ_TX_DONE_MASK as u8 {
                 println!("Packet sent: IRQMask: {:#04x}", irq);
                 break;
@@ -346,7 +346,7 @@ impl LoRa {
         }
 
         self.sleep_mode()
-            .context("Function - send_packet: ")?;
+            .context("send_packet: ")?;
 
         Ok(())
     }
