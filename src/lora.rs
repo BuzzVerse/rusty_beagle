@@ -5,6 +5,7 @@ use std::thread::sleep;
 use crate::defines::*;
 use crate::{GPIOPin, LoRaConfig, Mode};
 use crate::config::RadioConfig;
+use crate::conversions::*;
 use gpiod::{Lines, Output, AsValuesMut, Chip, Masked, Options};
 use log::{debug, error, info, trace, warn};
 use spidev::{SpiModeFlags, Spidev, SpidevOptions, SpidevTransfer};
@@ -327,7 +328,6 @@ impl LoRa {
 
         self.spi_write_register(LoRaRegister::PAYLOAD_LENGTH, buffer.len() as u8)
             .context("send_packet: ")?;
-
         self.write_fifo(buffer)
             .context("send_packet: ")?;
 
@@ -403,6 +403,7 @@ impl LoRa {
 
                 self.send_packet(packet)
                     .context("start: ")?;
+                Self::sleep(2000);
             },
         }
 

@@ -2,6 +2,7 @@ mod config;
 mod defines;
 mod logging;
 mod lora;
+mod conversions;
 
 extern crate log;
 
@@ -41,5 +42,7 @@ fn main() {
             std::process::exit(-1);
         }
     };
-    handle_error!(lora.start());
+    loop {
+        handle_error!(lora.start());
+    }
 }
