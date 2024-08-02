@@ -57,7 +57,7 @@ impl LoRa {
     }
 
     #[cfg(target_arch = "arm")]
-    pub fn from_config(lora_config: LoRaConfig) -> Result<LoRa> {
+    pub fn from_config(lora_config: &LoRaConfig) -> Result<LoRa> {
         let local_spi_config = lora_config.spi_config.clone();
         let mut spidev = Spidev::open(local_spi_config.spidev_path.clone())?;
 
@@ -81,8 +81,7 @@ impl LoRa {
 
         let mode = lora_config.mode.clone();
 
-        let mut lora = LoRa { spidev, reset_pin, mode };
-        lora.config_radio(lora_config.radio_config)?;
+        let lora = LoRa { spidev, reset_pin, mode };
 
         Ok(lora)
     }
@@ -351,12 +350,12 @@ impl LoRa {
         Ok(())
     }
 
-    pub fn start(&mut self) -> Result<()> {
+    pub fn start(&mut self, radio_config: RadioConfig) -> Result<()> {
         self.reset()
             .context("start: ")?;
         self.sleep_mode()
             .context("start: ")?;
-
+        self.config_radio(radio_config)?;
         match self.mode {
             Mode::RX => {
                 println!("[MODE]: RX");

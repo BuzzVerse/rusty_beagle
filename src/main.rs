@@ -30,8 +30,9 @@ fn main() {
     start_logger();
 
     let config = Config::from_file();
+    let radio_config = config.lora_config.radio_config.clone();
 
-    let mut lora = match LoRa::from_config(config.lora_config) {
+    let mut lora = match LoRa::from_config(&config.lora_config) {
         Ok(lora) => {
             info!("LoRa object created successfully.");
             lora
@@ -43,6 +44,6 @@ fn main() {
         }
     };
     loop {
-        handle_error!(lora.start());
+        handle_error!(lora.start(radio_config.clone()));
     }
 }
