@@ -205,7 +205,8 @@ impl LoRa {
             .context("set_coding_rate: ")?;
 
         let mask = 0xf1;
-        self.spi_write_register(register, (value & mask) | ((coding_rate as u8) << 1))
+        let cr = coding_rate as u8 - 4;
+        self.spi_write_register(register, (value & mask) | (cr << 1))
             .context("set_coding_rate: ")?;
         Self::sleep(10);
 
@@ -356,6 +357,7 @@ impl LoRa {
         self.sleep_mode()
             .context("start: ")?;
         self.config_radio(radio_config)?;
+        self.spi_write_register(LoRaRegister::MODEM_CONFIG_3, 0x04u8)?;
         match self.mode {
             Mode::RX => {
                 println!("[MODE]: RX");

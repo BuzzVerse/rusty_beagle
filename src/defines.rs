@@ -101,26 +101,26 @@ pub enum SPIIO {
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 pub enum Bandwidth {
-    bandwidth_7_8kHz   = 0x00,
-    bandwidth_10_4kHz  = 0x10,
-    bandwidth_15_6kHz  = 0x20,
-    bandwidth_20_8kHz  = 0x30,
-    bandwidth_31_25kHz = 0x40,
-    bandwidth_41_7kHz  = 0x50,
-    bandwidth_62_5kHz  = 0x60,
-    bandwidth_125kHz   = 0x70,
-    bandwidth_250kHz   = 0x80,
-    bandwidth_500kHz   = 0x90,
+    bandwidth_7_8kHz   = 0,
+    bandwidth_10_4kHz  = 1,
+    bandwidth_15_6kHz  = 2,
+    bandwidth_20_8kHz  = 3,
+    bandwidth_31_25kHz = 4,
+    bandwidth_41_7kHz  = 5,
+    bandwidth_62_5kHz  = 6,
+    bandwidth_125kHz   = 7,
+    bandwidth_250kHz   = 8,
+    bandwidth_500kHz   = 9,
 }
 
 #[allow(non_camel_case_types)]
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 pub enum CodingRate {
-    coding_4_5 = 0b0010,
-    coding_4_6 = 0b0100,
-    coding_4_7 = 0b0110,
-    coding_4_8 = 0b1000,
+    coding_4_5 = 5,
+    coding_4_6 = 6,
+    coding_4_7 = 7,
+    coding_4_8 = 8,
 }
 
 #[allow(non_camel_case_types)]
