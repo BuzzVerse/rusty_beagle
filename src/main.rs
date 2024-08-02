@@ -43,7 +43,5 @@ fn main() {
             std::process::exit(-1);
         }
     };
-    loop {
-        handle_error!(lora.start(radio_config.clone()));
-    }
+    handle_error!(lora.start(radio_config));
 }

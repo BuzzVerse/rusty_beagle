@@ -241,6 +241,35 @@ impl LoRa {
 
         Ok(())
     }
+    pub fn get_bandwidth(&mut self) -> Result<u8> {
+        let mut value = 0x00;
+        self.spi_read_register(LoRaRegister::MODEM_CONFIG_1, &mut value)?;
+
+        Ok((value & 0xf0) >> 4)
+    }
+
+    pub fn get_coding_rate(&mut self) -> Result<u8> {
+        let mut value = 0x00;
+        self.spi_read_register(LoRaRegister::MODEM_CONFIG_1, &mut value)?;
+
+        Ok(((value & 0x0e) >> 1) + 4)
+    }
+
+    pub fn get_spreading_factor(&mut self) -> Result<u8> {
+        let mut value = 0x00;
+        self.spi_read_register(LoRaRegister::MODEM_CONFIG_1, &mut value)?;
+
+        Ok((value >> 4) + 9)
+    }
+
+    pub fn get_frequency(&mut self) -> Result<[u8; 3]> {
+        let mut values: [u8; 3] = [0, 0, 0];
+        self.spi_read_register(LoRaRegister::FRF_MSB, &mut values[0])?;
+        self.spi_read_register(LoRaRegister::FRF_MID, &mut values[1])?;
+        self.spi_read_register(LoRaRegister::FRF_LSB, &mut values[2])?;
+
+        Ok(values)
+    }
 
     pub fn config_radio(&mut self, radio_config: RadioConfig) -> Result<()> {
         self.set_frequency(433_000_000)?;
@@ -358,54 +387,61 @@ impl LoRa {
             .context("start: ")?;
         self.config_radio(radio_config)?;
         self.spi_write_register(LoRaRegister::MODEM_CONFIG_3, 0x04u8)?;
-        match self.mode {
-            Mode::RX => {
-                println!("[MODE]: RX");
+        println!("Bandwidth: {}", self.get_bandwidth().unwrap());
+        println!("Coding rate: {}", self.get_coding_rate().unwrap());
+        println!("Spreading factor: {}", self.get_spreading_factor().unwrap());
+        for _ in 0..10000 {
+            match self.mode {
+                Mode::RX => {
+                    println!("[MODE]: RX");
 
-                let mut value = 0x00;
-                self.spi_read_register(LoRaRegister::OP_MODE, &mut value)
-                    .context("start: ")?;
-                println!("value: {:#04x} (expected 0x80)", value);
+                    let mut value = 0x00;
+                    self.spi_read_register(LoRaRegister::OP_MODE, &mut value)
+                        .context("start: ")?;
+                    println!("value: {:#04x} (expected 0x80)", value);
 
-                let mut crc_error = false;
+                    let mut crc_error = false;
 
-                let received_buffer = match self.receive_packet(&mut crc_error) {
-                    Ok(s) => s,
-                    Err(e) => {
-                        eprintln!("{:?}", e);
-                        error!("{:?}", e);
-                        std::process::exit(-1);
+                    let received_buffer = match self.receive_packet(&mut crc_error) {
+                        Ok(s) => s,
+                        Err(e) => {
+                            eprintln!("{:?}", e);
+                            error!("{:?}", e);
+                            std::process::exit(-1);
+                        }
+                    };
+
+                    if crc_error {
+                        println!("CRC Error");
                     }
-                };
+                    println!("Received {:#?} byte(s): {:#?}", received_buffer.len(), received_buffer);  
+                    self.sleep_mode()?;
+                },
+                Mode::TX => {
+                    println!("[MODE]: TX");
 
-                if crc_error {
-                    println!("CRC Error");
-                }
-                println!("Received {:#?} byte(s): {:#?}", received_buffer.len(), received_buffer);  
-            },
-            Mode::TX => {
-                println!("[MODE]: TX");
+                    let mut value = 0x00;
+                    self.spi_read_register(LoRaRegister::OP_MODE, &mut value)
+                        .context("start: ")?;
+                    println!("value: {:#04x} (expected 0x80)", value);
 
-                let mut value = 0x00;
-                self.spi_read_register(LoRaRegister::OP_MODE, &mut value)
-                    .context("start: ")?;
-                println!("value: {:#04x} (expected 0x80)", value);
+                    let mut lna = 0x00;
+                    self.spi_read_register(LoRaRegister::LNA, &mut lna)
+                        .context("start: ")?;
+                    self.spi_write_register(LoRaRegister::LNA, lna | 0x03)
+                        .context("start: ")?;
 
-                let mut lna = 0x00;
-                self.spi_read_register(LoRaRegister::LNA, &mut lna)
-                    .context("start: ")?;
-                self.spi_write_register(LoRaRegister::LNA, lna | 0x03)
-                    .context("start: ")?;
+                    self.standby_mode()
+                        .context("start: ")?;
 
-                self.standby_mode()
-                    .context("start: ")?;
+                    let packet = String::from("BUZZVERSE").as_bytes().to_vec();
 
-                let packet = String::from("BUZZVERSE").as_bytes().to_vec();
-
-                self.send_packet(packet)
-                    .context("start: ")?;
-                Self::sleep(2000);
-            },
+                    self.send_packet(packet)
+                        .context("start: ")?;
+                    self.sleep_mode()?;
+                    Self::sleep(2000);
+                },
+            }
         }
 
         self.reset()
