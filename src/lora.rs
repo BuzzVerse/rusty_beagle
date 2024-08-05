@@ -7,7 +7,7 @@ use crate::conversions::*;
 use crate::defines::*;
 use crate::{GPIOPin, GPIOPinNumber, LoRaConfig, Mode};
 use anyhow::{anyhow, Context, Result};
-use gpiod::{AsValuesMut, Chip, Lines, Masked, Options, Output, Input};
+use gpiod::{AsValuesMut, Chip, Lines, Masked, Options, Output, Input, Edge, EdgeDetect};
 use gpiod::DirectionType;
 use log::{debug, error, info, trace, warn};
 use spidev::{SpiModeFlags, Spidev, SpidevOptions, SpidevTransfer};
@@ -16,6 +16,7 @@ use spidev::{SpiModeFlags, Spidev, SpidevOptions, SpidevTransfer};
 pub struct LoRa {
     spidev: Spidev,
     reset_pin: Lines<Output>,
+    dio0_pin: Lines<Input>,
     pub mode: Mode,
 }
 
@@ -69,13 +70,15 @@ impl LoRa {
             .build();
         spidev.configure(&spi_options)?;
 
-        let reset_pin = Self::config_output_pin(lora_config.reset_gpio)?;
+        let reset_pin = Self::config_output_pin(lora_config.reset_gpio).context("from_config: ")?;
+        let dio0_pin = Self::config_input_pin(lora_config.dio0_gpio).context("from_config: ")?;
 
         let mode = lora_config.mode.clone();
 
         let lora = LoRa {
             spidev,
             reset_pin,
+            dio0_pin,
             mode,
         };
 
@@ -112,7 +115,9 @@ impl LoRa {
             Err(e) => return Err(anyhow!("While creating gpio chip got {:#?}", e)),
         };
 
-        let opts = Options::input([pin.offset]);
+        let opts = Options::input([pin.offset])
+            .edge(EdgeDetect::Rising)
+            .consumer("dio0_pin");
 
         let line = match chip.request_lines(opts) {
             Ok(line) => line,
@@ -354,18 +359,6 @@ impl LoRa {
         Ok(())
     }
 
-    fn has_received(&mut self, has_received: &mut bool) -> Result<()> {
-        let mut irq: u8 = 0x00;
-
-        self.spi_read_register(LoRaRegister::IRQ_FLAGS, &mut irq)
-            .context("has_received: ")?;
-        if irq & IRQMask::IRQ_RX_DONE_MASK as u8 == IRQMask::IRQ_RX_DONE_MASK as u8 {
-            *has_received = true;
-        }
-
-        Ok(())
-    }
-
     fn has_crc_error(&mut self, has_crc_error: &mut bool) -> Result<()> {
         let mut irq: u8 = 0x00;
 
@@ -379,16 +372,14 @@ impl LoRa {
     }
 
     pub fn receive_packet(&mut self, crc_error: &mut bool) -> Result<Vec<u8>> {
-        let mut irq: u8 = 0x00;
-        let mut has_received = false;
         let mut return_length = 0;
+
         self.receive_mode().context("receive_packet: ")?;
+
         loop {
-            self.has_received(&mut has_received)
-                .context("receive_packet: ")?;
-            self.spi_read_register(LoRaRegister::IRQ_FLAGS, &mut irq)
-                .context("receive_packet: ")?;
-            if has_received {
+            let dio0_event = self.dio0_pin.read_event().context("receive_packet: ")?;
+
+            if dio0_event.edge == Edge::Rising { // packet is received on rising edge of DIO0
                 let mut has_crc_error = false;
                 self.has_crc_error(&mut has_crc_error)
                     .context("receive_packet: ")?;
@@ -396,7 +387,6 @@ impl LoRa {
                     *crc_error = true;
                 }
 
-                println!("Packet received: IRQMask: {:#04x}", irq);
                 break;
             }
         }

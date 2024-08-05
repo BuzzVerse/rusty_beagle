@@ -72,6 +72,7 @@ pub struct SPIConfig {
 pub struct LoRaConfig {
     pub mode: Mode,
     pub reset_gpio: GPIOPinNumber,
+    pub dio0_gpio: GPIOPinNumber,
     pub spi_config: SPIConfig,
     pub radio_config: RadioConfig,
 }
