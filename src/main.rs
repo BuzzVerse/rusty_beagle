@@ -1,8 +1,8 @@
 mod config;
+mod conversions;
 mod defines;
 mod logging;
 mod lora;
-mod conversions;
 
 extern crate log;
 
@@ -24,7 +24,6 @@ macro_rules! handle_error {
         }
     };
 }
-
 
 fn main() {
     start_logger();

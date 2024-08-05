@@ -101,16 +101,16 @@ pub enum SPIIO {
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 pub enum Bandwidth {
-    bandwidth_7_8kHz   = 0,
-    bandwidth_10_4kHz  = 1,
-    bandwidth_15_6kHz  = 2,
-    bandwidth_20_8kHz  = 3,
+    bandwidth_7_8kHz = 0,
+    bandwidth_10_4kHz = 1,
+    bandwidth_15_6kHz = 2,
+    bandwidth_20_8kHz = 3,
     bandwidth_31_25kHz = 4,
-    bandwidth_41_7kHz  = 5,
-    bandwidth_62_5kHz  = 6,
-    bandwidth_125kHz   = 7,
-    bandwidth_250kHz   = 8,
-    bandwidth_500kHz   = 9,
+    bandwidth_41_7kHz = 5,
+    bandwidth_62_5kHz = 6,
+    bandwidth_125kHz = 7,
+    bandwidth_250kHz = 8,
+    bandwidth_500kHz = 9,
 }
 
 #[allow(non_camel_case_types)]
@@ -128,11 +128,10 @@ pub enum CodingRate {
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 pub enum SpreadingFactor {
     // _64   = 6, //TODO implement later, related issue [RB-11]
-    spreading_factor_128  = 7,
-    spreading_factor_256  = 8,
-    spreading_factor_512  = 9,
+    spreading_factor_128 = 7,
+    spreading_factor_256 = 8,
+    spreading_factor_512 = 9,
     spreading_factor_1024 = 10,
     spreading_factor_2048 = 11,
     spreading_factor_4096 = 12,
 }
-

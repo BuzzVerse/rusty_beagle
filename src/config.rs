@@ -1,8 +1,8 @@
+use crate::defines::{Bandwidth, CodingRate, SpreadingFactor};
 use log::{error, info};
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::{fs, process};
-use crate::defines::{CodingRate, SpreadingFactor, Bandwidth};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
