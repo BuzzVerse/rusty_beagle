@@ -7,8 +7,9 @@ Config(
         topic: "lora/sensor"
     ),
     lora_config: LoRaConfig(
-        mode: TX,
+        mode: RX,
         reset_gpio: GPIO_66,
+        dio0_gpio: GPIO_69,
         spi_config: SPIConfig(
             spidev_path: "/dev/spidev0.0",
             bits_per_word: 8,
@@ -17,7 +18,7 @@ Config(
             spi_mode: SPI_MODE_0,
         ),
         radio_config: RadioConfig(
-            bandwidth: bandwidth_31_25kHz,
+            bandwidth: bandwidth_20_8kHz,
             coding_rate: coding_4_8,
             spreading_factor: spreading_factor_4096,
             tx_power: 17,
