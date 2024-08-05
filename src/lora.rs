@@ -5,9 +5,10 @@ use std::thread::sleep;
 use crate::config::RadioConfig;
 use crate::conversions::*;
 use crate::defines::*;
-use crate::{GPIOPin, LoRaConfig, Mode};
+use crate::{GPIOPin, GPIOPinNumber, LoRaConfig, Mode};
 use anyhow::{anyhow, Context, Result};
-use gpiod::{AsValuesMut, Chip, Lines, Masked, Options, Output};
+use gpiod::{AsValuesMut, Chip, Lines, Masked, Options, Output, Input};
+use gpiod::DirectionType;
 use log::{debug, error, info, trace, warn};
 use spidev::{SpiModeFlags, Spidev, SpidevOptions, SpidevTransfer};
 
@@ -67,17 +68,8 @@ impl LoRa {
             .mode(SpiModeFlags::from_bits(local_spi_config.spi_mode as u32).unwrap())
             .build();
         spidev.configure(&spi_options)?;
-        let gpio_pin = GPIOPin::from_gpio_pin_number(lora_config.reset_gpio);
 
-        let chip = match Chip::new(gpio_pin.chip) {
-            Ok(chip) => chip,
-            Err(e) => return Err(anyhow!("While creating gpio chip got {:#?}", e)),
-        };
-        let opts = Options::output([gpio_pin.offset]);
-        let reset_pin = match chip.request_lines(opts) {
-            Ok(reset_pin) => reset_pin,
-            Err(e) => return Err(anyhow!("While requesting gpio line got {:#?}", e)),
-        };
+        let reset_pin = Self::config_output_pin(lora_config.reset_gpio)?;
 
         let mode = lora_config.mode.clone();
 
@@ -88,6 +80,46 @@ impl LoRa {
         };
 
         Ok(lora)
+    }
+
+    #[cfg(target_arch = "arm")]
+    fn config_output_pin(pin_number: GPIOPinNumber) -> Result<gpiod::Lines<Output>> {
+
+        let pin = GPIOPin::from_gpio_pin_number(pin_number);
+
+        let chip = match Chip::new(pin.chip) {
+            Ok(chip) => chip,
+            Err(e) => return Err(anyhow!("While creating gpio chip got {:#?}", e)),
+        };
+
+        let opts = Options::output([pin.offset]);
+
+        let line = match chip.request_lines(opts) {
+            Ok(line) => line,
+            Err(e) => return Err(anyhow!("While requesting gpio line got {:#?}", e)),
+        };
+
+        Ok(line)
+    }
+
+    #[cfg(target_arch = "arm")]
+    fn config_input_pin(pin_number: GPIOPinNumber) -> Result<gpiod::Lines<Input>> {
+
+        let pin = GPIOPin::from_gpio_pin_number(pin_number);
+
+        let chip = match Chip::new(pin.chip) {
+            Ok(chip) => chip,
+            Err(e) => return Err(anyhow!("While creating gpio chip got {:#?}", e)),
+        };
+
+        let opts = Options::input([pin.offset]);
+
+        let line = match chip.request_lines(opts) {
+            Ok(line) => line,
+            Err(e) => return Err(anyhow!("While requesting gpio line got {:#?}", e)),
+        };
+
+        Ok(line)
     }
 
     #[cfg(target_arch = "arm")]
