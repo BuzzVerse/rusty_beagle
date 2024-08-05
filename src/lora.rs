@@ -409,7 +409,6 @@ impl LoRa {
     }
 
     pub fn send_packet(&mut self, buffer: Vec<u8>) -> Result<()> {
-        // TODO rework to send buffers instead of single bytes, related issue: [RB-8]
         let mut tx_address = 0x00;
         self.spi_read_register(LoRaRegister::FIFO_TX_BASE_ADDR, &mut tx_address)
             .context("send_packet: ")?;
@@ -420,16 +419,13 @@ impl LoRa {
             .context("send_packet: ")?;
         self.write_fifo(buffer).context("send_packet: ")?;
 
-        // send_packet()
-        let mut irq: u8 = 0x00;
-
         self.transmit_mode().context("send_packet: ")?;
 
         loop {
-            self.spi_read_register(LoRaRegister::IRQ_FLAGS, &mut irq)
-                .context("send_packet: ")?;
-            if irq & IRQMask::IRQ_TX_DONE_MASK as u8 == IRQMask::IRQ_TX_DONE_MASK as u8 {
-                println!("Packet sent: IRQMask: {:#04x}", irq);
+            let dio0_event = self.dio0_pin.read_event().context("send_packet: ")?;
+
+            if dio0_event.edge == Edge::Rising { // rising edge of DIO0 indicates succesful packet send
+                println!("Packet sent.");
                 break;
             }
         }
@@ -443,6 +439,7 @@ impl LoRa {
         self.reset().context("start: ")?;
         self.sleep_mode().context("start: ")?;
         self.config_radio(radio_config).context("start: ")?;
+        self.config_dio().context("start: ")?;
         self.spi_write_register(LoRaRegister::MODEM_CONFIG_3, 0x04u8)
             .context("start: ")?;
         println!("Bandwidth: {}", self.get_bandwidth().unwrap());
@@ -524,6 +521,21 @@ impl LoRa {
 
         // wait 10 ms before using the chip
         Self::sleep(10);
+
+        Ok(())
+    }
+
+    #[cfg(target_arch = "arm")]
+    pub fn config_dio(&mut self) -> Result<()> {
+        let mut initial_value = 0x00;
+        self.spi_read_register(LoRaRegister::DIO_MAPPING_1, &mut initial_value).context("config_dio: ")?;
+        match self.mode {
+            Mode::RX => {
+            },
+            Mode::TX => {
+                self.spi_write_register(LoRaRegister::DIO_MAPPING_1, initial_value | (0b01 << 6)).context("config_dio: ")?; // DIO0 TxDone
+            },
+        }
 
         Ok(())
     }
