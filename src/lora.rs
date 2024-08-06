@@ -331,7 +331,7 @@ impl LoRa {
         self.spi_read_register(LoRaRegister::MODEM_CONFIG_1, &mut value)
             .context("get_spreading_factor: ")?;
 
-        Ok((value >> 4) + 9)
+        Ok((value >> 4) + 8)
     }
 
     pub fn get_frequency(&mut self) -> Result<[u8; 3]> {
