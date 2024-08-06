@@ -41,3 +41,9 @@ pub fn vec_to_i32(vec: &[u8], start: usize) -> Result<i32> {
     let array: [u8; 4] = slice.try_into().context("vec_to_i32: ")?;
     Ok(i32::from_le_bytes(array))
 }
+
+pub fn vec_to_i16(vec: &[u8], start: usize) -> Result<i16> {
+    let slice = &vec[start..start + 2];
+    let array: [u8; 2] = slice.try_into().context("vec_to_i16: ")?;
+    Ok(i16::from_le_bytes(array))
+}
