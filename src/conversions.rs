@@ -12,6 +12,12 @@ pub fn vec_to_f64(vec: &[u8], start: usize) -> Result<f64> {
     Ok(f64::from_le_bytes(array))
 }
 
+pub fn vec_to_u16(vec: &[u8], start: usize) -> Result<u16> {
+    let slice = &vec[start..start + 2];
+    let array: [u8; 2] = slice.try_into().context("vec_to_u16: ")?;
+    Ok(u16::from_le_bytes(array))
+}
+
 pub fn vec_to_u32(vec: &[u8], start: usize) -> Result<u32> {
     let slice = &vec[start..start + 4];
     let array: [u8; 4] = slice.try_into().context("vec_to_u32: ")?;
