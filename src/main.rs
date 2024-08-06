@@ -3,6 +3,7 @@ mod conversions;
 mod defines;
 mod logging;
 mod lora;
+mod packet;
 
 extern crate log;
 
