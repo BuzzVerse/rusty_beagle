@@ -94,8 +94,16 @@ pub enum Mode {
 #[allow(non_camel_case_types)]
 #[derive(Debug, Deserialize, Serialize, Clone, Copy)]
 pub enum GPIOPinNumber {
+    GPIO_26 = 26,
+    GPIO_27 = 27,
+    GPIO_40 = 40,
     GPIO_44 = 44,
     GPIO_45 = 45,
+    GPIO_46 = 46,
+    GPIO_47 = 47,
+    GPIO_60 = 60,
+    GPIO_61 = 61,
+    GPIO_65 = 65,
     GPIO_66 = 66,
     GPIO_67 = 67,
     GPIO_68 = 68,
