@@ -1,21 +1,37 @@
 use anyhow::{anyhow, Context, Result};
 
-pub fn array_to_f32(array: [u8; 4]) -> f32 {
-    f32::from_le_bytes(array)
+pub fn vec_to_f32(vec: &[u8], start: usize) -> Result<f32> {
+    let slice = &vec[start..start + 4];
+    let array: [u8; 4] = slice.try_into().context("vec_to_f32: ")?;
+    Ok(f32::from_le_bytes(array))
 }
 
-pub fn array_to_f64(array: [u8; 8]) -> f64 {
-    f64::from_le_bytes(array)
+pub fn vec_to_f64(vec: &[u8], start: usize) -> Result<f64> {
+    let slice = &vec[start..start + 8];
+    let array: [u8; 8] = slice.try_into().context("vec_to_f64: ")?;
+    Ok(f64::from_le_bytes(array))
 }
 
-pub fn array_to_u32(array: [u8; 4]) -> u32 {
-    u32::from_le_bytes(array)
+pub fn vec_to_u32(vec: &[u8], start: usize) -> Result<u32> {
+    let slice = &vec[start..start + 4];
+    let array: [u8; 4] = slice.try_into().context("vec_to_u32: ")?;
+    Ok(u32::from_le_bytes(array))
 }
 
-pub fn array_to_u64(array: [u8; 8]) -> u64 {
-    u64::from_le_bytes(array)
+pub fn vec_to_u64(vec: &[u8], start: usize) -> Result<u64> {
+    let slice = &vec[start..start + 8];
+    let array: [u8; 8] = slice.try_into().context("vec_to_u64: ")?;
+    Ok(u64::from_le_bytes(array))
 }
 
-pub fn array_to_i32(array: [u8; 4]) -> i32 {
-    i32::from_le_bytes(array)
+pub fn vec_to_u128(vec: &[u8], start: usize) -> Result<u128> {
+    let slice = &vec[start..start + 16];
+    let array: [u8; 16] = slice.try_into().context("vec_to_u128: ")?;
+    Ok(u128::from_le_bytes(array))
+}
+
+pub fn vec_to_i32(vec: &[u8], start: usize) -> Result<i32> {
+    let slice = &vec[start..start + 4];
+    let array: [u8; 4] = slice.try_into().context("vec_to_i32: ")?;
+    Ok(i32::from_le_bytes(array))
 }
