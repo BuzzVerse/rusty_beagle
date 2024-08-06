@@ -1,4 +1,4 @@
-import io, os, sys, time, subprocess, csv
+import io, os, sys, time, subprocess, csv, logging
 from datetime import datetime
 
 if len(sys.argv) != 3:
@@ -14,6 +14,8 @@ now = datetime.now()
 dt_string = now.strftime("%Y%m%d%H%M%S")
 script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
 folder_path = os.path.join(script_dir, "tmp")
+logger = logging.getLogger(__name__)
+logging.basicConfig(filename=(folder_path + "/beagle_parameters.log"), level=logging.INFO)
 os.makedirs(folder_path, exist_ok=True)
 csv_file = os.path.join(folder_path, f"lora_comunication_stats_{dt_string}.csv")
 with open(csv_file, mode='w', newline='') as file:
@@ -42,4 +44,5 @@ with open(csv_file, mode='w', newline='') as file:
     crc_errors = rx_stdout.count("CRC Error")
 
     writer.writerow([packages_sent, packeges_received, crc_errors, time_to_run])
+    logger.info(f"Did: {packages_sent}, {packeges_received}, {crc_errors}")
 

@@ -1,4 +1,4 @@
-import io, os, sys, time, subprocess, csv
+import io, os, sys, time, subprocess, csv, logging
 from datetime import datetime
 
 bandwidths = [
@@ -30,23 +30,30 @@ spreading_factors = [
         "spreading_factor_4096",
         ]
 
-if len(sys.argv) != 2:
+if len(sys.argv) != 3:
     print("Wrong number of arguments")
+    print("Correct arguments:")
+    print("python3 ./test_parameters.py [time_to_run] [path_to_binary]")
     sys.exit(-1)
 
-path_to_binary = sys.argv[1];
+path_to_binary = sys.argv[2];
+time_to_run = sys.argv[1];
+
 
 now = datetime.now()
 dt_string = now.strftime("%Y%m%d%H%M%S")
-folder_path = "./tmp"
+script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+folder_path = os.path.join(script_dir, "tmp")
 os.makedirs(folder_path, exist_ok=True)
+logger = logging.getLogger(__name__)
+logging.basicConfig(filename=(folder_path + "/beagle_parameters.log"), level=logging.INFO)
 csv_file = os.path.join(folder_path, f"lora_comunication_stats_{dt_string}.csv")
 with open(csv_file, mode='w', newline='') as file:
     writer = csv.writer(file)
     
     # Write the header
     writer.writerow(['Bandwidth', 'Coding Rate', 'Spreading Factor', 'Packages Sent', 'Packages Received', 'CRC Errors'])
-
+    logger.info("Started")
     for bandwidth in bandwidths:
         for coding_rate in coding_rates:
             for spreading_factor in spreading_factors:
@@ -56,7 +63,7 @@ with open(csv_file, mode='w', newline='') as file:
                 tx_process = subprocess.Popen([path_to_binary, "./tx_conf.ron"], stdout=subprocess.PIPE)
 
                 # wait some time for packages
-                time.sleep(0.1) # wait 5 minutes 
+                time.sleep(float(time_to_run)) 
                 rx_process.terminate()
                 tx_process.terminate()
 
@@ -72,4 +79,7 @@ with open(csv_file, mode='w', newline='') as file:
                 
                 writer.writerow([bandwidth, coding_rate, spreading_factor, packages_sent, packeges_received, crc_errors])
 
-                print(f"Did: {bandwidth}, {coding_rate}, {spreading_factor}\n")
+                print(f"Did: {bandwidth}, {coding_rate}, {spreading_factor}")
+                logger.info(f"Did: {bandwidth}, {coding_rate}, {spreading_factor} got {packages_sent}, {packeges_received}, {crc_errors}")
+
+                
