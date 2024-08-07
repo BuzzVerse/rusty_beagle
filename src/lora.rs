@@ -1,15 +1,13 @@
-#![allow(unused_imports)]
 use core::time;
 use std::thread::sleep;
 
 use crate::config::RadioConfig;
-use crate::conversions::*;
 use crate::defines::*;
+use crate::packet::{Data, DataType, Packet, BME280};
 use crate::{GPIOPin, GPIOPinNumber, LoRaConfig, Mode};
 use anyhow::{anyhow, Context, Result};
-use gpiod::{AsValuesMut, Chip, Lines, Masked, Options, Output, Input, Edge, EdgeDetect};
-use gpiod::DirectionType;
-use log::{debug, error, info, trace, warn};
+use gpiod::{Chip, Lines, Options, Output, Input, Edge, EdgeDetect};
+use log::{error, info};
 use spidev::{SpiModeFlags, Spidev, SpidevOptions, SpidevTransfer};
 
 #[cfg(target_arch = "arm")]
@@ -444,15 +442,14 @@ impl LoRa {
         self.config_dio().context("start: ")?;
         self.spi_write_register(LoRaRegister::MODEM_CONFIG_3, 0x04u8)
             .context("start: ")?;
-        println!("Bandwidth: {}", self.get_bandwidth().unwrap());
-        println!("Coding rate: {}", self.get_coding_rate().unwrap());
-        println!("Spreading factor: {}", self.get_spreading_factor().unwrap());
-        println!("Frequency: {:?}", self.get_frequency().unwrap());
+        println!("Bandwidth: {}", self.get_bandwidth().context("start: ")?);
+        println!("Coding rate: {}", self.get_coding_rate().context("start: ")?);
+        println!("Spreading factor: {}", self.get_spreading_factor().context("start: ")?);
+        println!("Frequency: {:?}", self.get_frequency().context("start: ")?);
+        println!("[MODE]: {:?}", self.mode);
         for _ in 0..10000 {
             match self.mode {
                 Mode::RX => {
-                    println!("[MODE]: RX");
-
                     let mut value = 0x00;
                     self.spi_read_register(LoRaRegister::OP_MODE, &mut value)
                         .context("start: ")?;
@@ -472,16 +469,24 @@ impl LoRa {
                     if crc_error {
                         println!("CRC Error");
                     }
-                    println!(
-                        "Received {:?} byte(s): {:?}",
-                        received_buffer.len(),
-                        String::from_utf8(received_buffer)
-                    );
+
+                    let packet = match Packet::new(&received_buffer) {
+                        Ok(packet) => {
+                            println!("Received packet: {:?}", packet);
+                            if !crc_error { info!("Received packet: {:?}", packet);}
+                            packet
+                        },
+                        Err(e) => {
+                            println!("Bad package: {:?}", e);
+                            println!("Received: {:04x?}", received_buffer);
+                            self.sleep_mode().context("start: ")?;
+                            continue;
+                        }
+                    };
+
                     self.sleep_mode().context("start: ")?;
                 }
                 Mode::TX => {
-                    println!("[MODE]: TX");
-
                     let mut value = 0x00;
                     self.spi_read_register(LoRaRegister::OP_MODE, &mut value)
                         .context("start: ")?;
@@ -495,9 +500,19 @@ impl LoRa {
 
                     self.standby_mode().context("start: ")?;
 
-                    let packet = String::from("BUZZVERSE").as_bytes().to_vec();
-
-                    self.send_packet(packet).context("start: ")?;
+                    let packet = Packet {
+                        version: 0x33,
+                        id: 0x22,
+                        msg_id: 0x11,
+                        msg_count: 0x00,
+                        data_type: DataType::BME280,
+                        data: Data::Bme280(BME280 { 
+                            temperature: 23, 
+                            humidity: 4, 
+                            pressure: 56
+                        }),
+                    };
+                    self.send_packet(packet.to_bytes()?).context("start: ")?;
                     self.sleep_mode()?;
                     Self::sleep(2000);
                 }
