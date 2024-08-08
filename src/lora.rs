@@ -4,7 +4,7 @@ use std::thread::sleep;
 use crate::config::RadioConfig;
 use crate::defines::*;
 use crate::packet::{Data, DataType, Packet, BME280};
-use crate::version_tag::print_version_tag;
+use crate::version_tag::{print_version_tag, print_rusty_beagle};
 use crate::{GPIOPin, GPIOPinNumber, LoRaConfig, Mode};
 use anyhow::{anyhow, Context, Result};
 use gpiod::{Chip, Lines, Options, Output, Input, Edge, EdgeDetect};
@@ -467,6 +467,7 @@ impl LoRa {
         self.config_dio().context("LoRa::start")?;
         self.spi_write_register(LoRaRegister::MODEM_CONFIG_3, 0x04u8)
             .context("LoRa::start")?;
+        print_rusty_beagle();
         print_version_tag();
         println!("+-------------------------+");
         println!("| Bandwidth: {}            |", self.get_bandwidth().context("LoRa::start")?);
