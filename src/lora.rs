@@ -22,7 +22,24 @@ pub struct LoRa {
 #[cfg(target_arch = "x86_64")]
 pub struct LoRa {
     mock_registers: [u8; 112],
+    dio0_pin: MockGPIO,
     pub mode: Mode,
+}
+
+#[cfg(target_arch = "x86_64")]
+pub struct MockGPIO {}
+
+#[cfg(target_arch = "x86_64")]
+impl MockGPIO {
+    fn read_event(&mut self) -> Result<MockEvent> {
+        let event = MockEvent { edge: Edge::Rising };
+        Ok(event)
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+pub struct MockEvent {
+    edge: Edge,
 }
 
 impl LoRa {
@@ -33,8 +50,10 @@ impl LoRa {
     #[cfg(target_arch = "x86_64")]
     pub fn from_config(_lora_config: &LoRaConfig) -> Result<LoRa> {
         let mock_registers = [1; 112];
+        let dio0_pin = MockGPIO {};
         let mode = _lora_config.mode.clone();
-        Ok(LoRa { mock_registers, mode })
+
+        Ok(LoRa { mock_registers, dio0_pin, mode })
     }
 
     #[cfg(target_arch = "x86_64")]
@@ -56,6 +75,11 @@ impl LoRa {
         // wait for 10 ms before using the chip
         Self::sleep(10);
 
+        Ok(())
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    pub fn config_dio(&mut self) -> Result<()> {
         Ok(())
     }
 
