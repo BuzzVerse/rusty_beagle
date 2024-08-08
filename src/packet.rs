@@ -293,67 +293,19 @@ mod tests {
     #[test]
     fn deserialize_bme280_data_too_short() {
         let bytes: Vec<u8> = vec![0x33, 0x22, 0x11, 0x00, 0x01, 0x17, 0x2D];
-
-        let expected_packet = Packet {
-            version: 0x33,
-            id: 0x22,
-            msg_id: 0x11,
-            msg_count: 0x00,
-            data_type: DataType::BME280,
-            data: Data::Bme280(BME280 {
-                temperature: 23,
-                humidity: 45,
-                pressure: 67,
-            }),
-        };
-
-        let deserialized_data = Packet::new(&bytes).unwrap();
-
-        assert_ne!(calculate_hash(&deserialized_data), calculate_hash(&expected_packet));
+        assert!(Packet::new(&bytes).is_err());
     }
 
     #[test]
-    fn deserialize_bme280_too_long() {
+    fn deserialize_bme280_packet_too_long() {
         let bytes: Vec<u8> = vec![0x33, 0x22, 0x11, 0x00, 0x01, 0x17, 0x2D, 0x43, 0xFF];
-
-        let expected_packet = Packet {
-            version: 0x33,
-            id: 0x22,
-            msg_id: 0x11,
-            msg_count: 0x00,
-            data_type: DataType::BME280,
-            data: Data::Bme280(BME280 {
-                temperature: 23,
-                humidity: 45,
-                pressure: 67,
-            }),
-        };
-
-        let deserialized_data = Packet::new(&bytes).unwrap();
-
-        assert_ne!(calculate_hash(&deserialized_data), calculate_hash(&expected_packet));
+        assert!(Packet::new(&bytes).is_err());
     }
 
     #[test]
     fn deserialize_bme280_packet_too_short() {
         let bytes: Vec<u8> = vec![0x33, 0x22, 0x11];
-
-        let expected_packet = Packet {
-            version: 0x33,
-            id: 0x22,
-            msg_id: 0x11,
-            msg_count: 0x00,
-            data_type: DataType::BME280,
-            data: Data::Bme280(BME280 {
-                temperature: 23,
-                humidity: 45,
-                pressure: 67,
-            }),
-        };
-
-        let deserialized_data = Packet::new(&bytes).unwrap();
-
-        assert_ne!(calculate_hash(&deserialized_data), calculate_hash(&expected_packet));
+        assert!(Packet::new(&bytes).is_err());
     }
 
     #[test]
@@ -411,70 +363,22 @@ mod tests {
             0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00];
-
-        let expected_packet = Packet {
-            version: 0x33,
-            id: 0x22,
-            msg_id: 0x11,
-            msg_count: 0x00,
-            data_type: DataType::BMA400,
-            data: Data::Bma400(BMA400 {
-                x: 255,
-                y: 256,
-                z: 1024,
-            }),
-        };
-
-        let deserialized_data = Packet::new(&bytes).unwrap();
-
-        assert_ne!(calculate_hash(&deserialized_data), calculate_hash(&expected_packet));
+        assert!(Packet::new(&bytes).is_err());
     }
 
     #[test]
-    fn deserialize_bma400_too_long() {
+    fn deserialize_bma400_packet_too_long() {
         let bytes: Vec<u8> = vec![0x33, 0x22, 0x11, 0x00, 0x02,
             0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF];
-
-        let expected_packet = Packet {
-            version: 0x33,
-            id: 0x22,
-            msg_id: 0x11,
-            msg_count: 0x00,
-            data_type: DataType::BMA400,
-            data: Data::Bma400(BMA400 {
-                x: 255,
-                y: 256,
-                z: 1024,
-            }),
-        };
-
-        let deserialized_data = Packet::new(&bytes).unwrap();
-
-        assert_ne!(calculate_hash(&deserialized_data), calculate_hash(&expected_packet));
+        assert!(Packet::new(&bytes).is_err());
     }
 
     #[test]
     fn deserialize_bme400_packet_too_short() {
         let bytes: Vec<u8> = vec![0x33, 0x22, 0x11];
-
-        let expected_packet = Packet {
-            version: 0x33,
-            id: 0x22,
-            msg_id: 0x11,
-            msg_count: 0x00,
-            data_type: DataType::BMA400,
-            data: Data::Bma400(BMA400 {
-                x: 255,
-                y: 256,
-                z: 1024,
-            }),
-        };
-
-        let deserialized_data = Packet::new(&bytes).unwrap();
-
-        assert_ne!(calculate_hash(&deserialized_data), calculate_hash(&expected_packet));
+        assert!(Packet::new(&bytes).is_err());
     }
 
     #[test]
@@ -530,67 +434,22 @@ mod tests {
             0x01,
             0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
             0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
-
-        let expected_packet = Packet {
-            version: 0x33,
-            id: 0x22,
-            msg_id: 0x11,
-            msg_count: 0x00,
-            data_type: DataType::MQ2,
-            data: Data::Mq2(MQ2 {
-                gas_type: 0x01,
-                value: u128::MAX,
-            }),
-        };
-
-        let deserialized_data = Packet::new(&bytes).unwrap();
-
-        assert_ne!(calculate_hash(&deserialized_data), calculate_hash(&expected_packet));
+        assert!(Packet::new(&bytes).is_err());
     }
 
     #[test]
-    fn deserialize_mq2_too_long() {
+    fn deserialize_mq2_packet_too_long() {
         let bytes: Vec<u8> = vec![0x33, 0x22, 0x11, 0x00, 0x03,
             0x01,
             0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
             0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
-
-        let expected_packet = Packet {
-            version: 0x33,
-            id: 0x22,
-            msg_id: 0x11,
-            msg_count: 0x00,
-            data_type: DataType::MQ2,
-            data: Data::Mq2(MQ2 {
-                gas_type: 0x01,
-                value: u128::MAX,
-            }),
-        };
-
-        let deserialized_data = Packet::new(&bytes).unwrap();
-
-        assert_ne!(calculate_hash(&deserialized_data), calculate_hash(&expected_packet));
+        assert!(Packet::new(&bytes).is_err());
     }
 
     #[test]
     fn deserialize_mq2_packet_too_short() {
         let bytes: Vec<u8> = vec![0x33, 0x22, 0x11];
-
-        let expected_packet = Packet {
-            version: 0x33,
-            id: 0x22,
-            msg_id: 0x11,
-            msg_count: 0x00,
-            data_type: DataType::MQ2,
-            data: Data::Mq2(MQ2 {
-                gas_type: 0x01,
-                value: u128::MAX,
-            }),
-        };
-
-        let deserialized_data = Packet::new(&bytes).unwrap();
-
-        assert_ne!(calculate_hash(&deserialized_data), calculate_hash(&expected_packet));
+        assert!(Packet::new(&bytes).is_err());
     }
 
     #[test]
@@ -603,7 +462,7 @@ mod tests {
             data_type: DataType::Gps,
             data: Data::Gps(Gps {
                 status: u8::MAX,
-                altitude: i16::MAX, // FIXME
+                altitude: u16::MAX, 
                 latitude: i32::MAX,
                 longitude: i32::MAX,
             }),
@@ -611,9 +470,9 @@ mod tests {
 
         let expected_data: Vec<u8> = vec![0x33, 0x22, 0x11, 0x00, 0x04,
             0xFF, 
-            0xFF, 0x7F,
+            0xFF, 0xFF,
             0xFF, 0xFF, 0xFF, 0x7F, 
-            0xFF, 0xFF, 0xFF, 0x7F]; // FIXME (signed ints)
+            0xFF, 0xFF, 0xFF, 0x7F];
         let serialized_packet = packet.to_bytes().unwrap();
 
         assert_eq!(serialized_packet, expected_data);
@@ -623,7 +482,7 @@ mod tests {
     fn deserialize_gps_correct() {
         let bytes: Vec<u8> = vec![0x33, 0x22, 0x11, 0x00, 0x04,
             0xFF, 
-            0xFF, 0x7F,
+            0xFF, 0xFF,
             0xFF, 0xFF, 0xFF, 0x7F, 
             0xFF, 0xFF, 0xFF, 0x7F];
 
@@ -635,7 +494,7 @@ mod tests {
             data_type: DataType::Gps,
             data: Data::Gps(Gps {
                 status: u8::MAX,
-                altitude: i16::MAX, // FIXME
+                altitude: u16::MAX, 
                 latitude: i32::MAX,
                 longitude: i32::MAX,
             }),
@@ -650,77 +509,26 @@ mod tests {
     fn deserialize_gps_data_too_short() {
         let bytes: Vec<u8> = vec![0x33, 0x22, 0x11, 0x00, 0x04,
             0xFF, 
-            0xFF, 0x7F,
+            0xFF, 0xFF,
             0xFF, 0xFF, 0xFF, 0x7F, 
             0xFF, 0xFF, 0xFF];
-
-        let expected_packet = Packet {
-            version: 0x33,
-            id: 0x22,
-            msg_id: 0x11,
-            msg_count: 0x00,
-            data_type: DataType::Gps,
-            data: Data::Gps(Gps {
-                status: u8::MAX,
-                altitude: i16::MAX, // FIXME
-                latitude: i32::MAX,
-                longitude: i32::MAX,
-            }),
-        };
-
-        let deserialized_data = Packet::new(&bytes).unwrap();
-
-        assert_ne!(calculate_hash(&deserialized_data), calculate_hash(&expected_packet));
+        assert!(Packet::new(&bytes).is_err());
     }
 
     #[test]
-    fn deserialize_gps_too_long() {
+    fn deserialize_gps_packet_too_long() {
         let bytes: Vec<u8> = vec![0x33, 0x22, 0x11, 0x00, 0x04,
             0xFF, 
-            0xFF, 0x7F,
+            0xFF, 0xFF,
             0xFF, 0xFF, 0xFF, 0x7F, 
             0xFF, 0xFF, 0xFF, 0x7F, 0xFF];
-
-        let expected_packet = Packet {
-            version: 0x33,
-            id: 0x22,
-            msg_id: 0x11,
-            msg_count: 0x00,
-            data_type: DataType::Gps,
-            data: Data::Gps(Gps {
-                status: u8::MAX,
-                altitude: i16::MAX, // FIXME
-                latitude: i32::MAX,
-                longitude: i32::MAX,
-            }),
-        };
-
-        let deserialized_data = Packet::new(&bytes).unwrap();
-
-        assert_ne!(calculate_hash(&deserialized_data), calculate_hash(&expected_packet));
+        assert!(Packet::new(&bytes).is_err());
     }
 
     #[test]
     fn deserialize_gps_packet_too_short() {
         let bytes: Vec<u8> = vec![0x33, 0x22, 0x11];
-
-        let expected_packet = Packet {
-            version: 0x33,
-            id: 0x22,
-            msg_id: 0x11,
-            msg_count: 0x00,
-            data_type: DataType::Gps,
-            data: Data::Gps(Gps {
-                status: u8::MAX,
-                altitude: i16::MAX, // FIXME
-                latitude: i32::MAX,
-                longitude: i32::MAX,
-            }),
-        };
-
-        let deserialized_data = Packet::new(&bytes).unwrap();
-
-        assert_ne!(calculate_hash(&deserialized_data), calculate_hash(&expected_packet));
+        assert!(Packet::new(&bytes).is_err());
     }
 
     #[test]
@@ -760,55 +568,25 @@ mod tests {
 
     #[test]
     fn deserialize_sms_data_too_short() {
-        let bytes: Vec<u8> = vec![0x33, 0x22, 0x11, 0x00, 0x20, 0x41];
-
-        let expected_packet = Packet {
-            version: 0x33,
-            id: 0x22,
-            msg_id: 0x11,
-            msg_count: 0x00,
-            data_type: DataType::Sms,
-            data: Data::Sms(String::from("AB")),
-        };
-
-        let deserialized_data = Packet::new(&bytes).unwrap();
-
-        assert_ne!(calculate_hash(&deserialized_data), calculate_hash(&expected_packet));
+        let bytes: Vec<u8> = vec![0x33, 0x22, 0x11, 0x00, 0x20]; // 0 byte string
+        assert!(Packet::new(&bytes).is_err());
     }
 
     #[test]
-    fn deserialize_sms_too_long() {
-        let bytes: Vec<u8> = vec![0x33, 0x22, 0x11, 0x00, 0x20, 0x41, 0x42, 0xFF];
-
-        let expected_packet = Packet {
-            version: 0x33,
-            id: 0x22,
-            msg_id: 0x11,
-            msg_count: 0x00,
-            data_type: DataType::Sms,
-            data: Data::Sms(String::from("AB")),
-        };
-
-        let deserialized_data = Packet::new(&bytes).unwrap();
-
-        assert_ne!(calculate_hash(&deserialized_data), calculate_hash(&expected_packet));
+    fn deserialize_sms_packet_too_long() {
+        let bytes: Vec<u8> = vec![0x33, 0x22, 0x11, 0x00, 0x20,
+            0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
+            0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
+            0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
+            0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
+            0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
+            0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20];
+        assert!(Packet::new(&bytes).is_err());
     }
 
     #[test]
     fn deserialize_sms_packet_too_short() {
         let bytes: Vec<u8> = vec![0x33, 0x22, 0x11];
-
-        let expected_packet = Packet {
-            version: 0x33,
-            id: 0x22,
-            msg_id: 0x11,
-            msg_count: 0x00,
-            data_type: DataType::Sms,
-            data: Data::Sms(String::from("AB")),
-        };
-
-        let deserialized_data = Packet::new(&bytes).unwrap();
-
-        assert_ne!(calculate_hash(&deserialized_data), calculate_hash(&expected_packet));
+        assert!(Packet::new(&bytes).is_err());
     }
 }
