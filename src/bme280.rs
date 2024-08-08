@@ -1,17 +1,19 @@
 use bme280::i2c::BME280;
 use linux_embedded_hal::{Delay, I2cdev};
 
+use crate::BME280Config;
+
 pub struct BME280Sensor {
     bme280: BME280<I2cdev>,
     delay: Delay,
 }
 
 impl BME280Sensor {
-    pub fn new(i2c_bus_path: &str) -> Self {
-        let i2c_bus = I2cdev::new(i2c_bus_path).unwrap();
+    pub fn new(config: BME280Config) -> Self {
+        let i2c_bus = I2cdev::new(config.i2c_bus_path).unwrap();
         let mut delay = Delay {};
 
-        let mut bme280 = BME280::new_primary(i2c_bus);
+        let mut bme280 = BME280::new(i2c_bus, config.i2c_address);
         bme280.init(&mut delay).unwrap();
 
         BME280Sensor { bme280, delay }
