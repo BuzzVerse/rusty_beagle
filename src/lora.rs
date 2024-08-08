@@ -4,6 +4,7 @@ use std::thread::sleep;
 use crate::config::RadioConfig;
 use crate::defines::*;
 use crate::packet::{Data, DataType, Packet, BME280};
+use crate::version_tag::print_version_tag;
 use crate::{GPIOPin, GPIOPinNumber, LoRaConfig, Mode};
 use anyhow::{anyhow, Context, Result};
 use gpiod::{Chip, Lines, Options, Output, Input, Edge, EdgeDetect};
@@ -442,6 +443,7 @@ impl LoRa {
         self.config_dio().context("LoRa::start: ")?;
         self.spi_write_register(LoRaRegister::MODEM_CONFIG_3, 0x04u8)
             .context("LoRa::start: ")?;
+        print_version_tag();
         println!("Bandwidth: {}", self.get_bandwidth().context("LoRa::start: ")?);
         println!("Coding rate: {}", self.get_coding_rate().context("LoRa::start: ")?);
         println!("Spreading factor: {}", self.get_spreading_factor().context("LoRa::start: ")?);
@@ -450,11 +452,6 @@ impl LoRa {
         for _ in 0..10000 {
             match self.mode {
                 Mode::RX => {
-                    let mut value = 0x00;
-                    self.spi_read_register(LoRaRegister::OP_MODE, &mut value)
-                        .context("LoRa::start: ")?;
-                    println!("value: {:#04x} (expected 0x80)", value);
-
                     let mut crc_error = false;
 
                     let received_buffer = match self.receive_packet(&mut crc_error) {
@@ -478,7 +475,7 @@ impl LoRa {
                         },
                         Err(e) => {
                             println!("Bad package: {:?}", e);
-                            println!("Received: {:04x?}", received_buffer);
+                            println!("Received: {:04X?}", received_buffer);
                             self.sleep_mode().context("LoRa::start: ")?;
                             continue;
                         }
@@ -487,11 +484,6 @@ impl LoRa {
                     self.sleep_mode().context("LoRa::start: ")?;
                 }
                 Mode::TX => {
-                    let mut value = 0x00;
-                    self.spi_read_register(LoRaRegister::OP_MODE, &mut value)
-                        .context("LoRa::start: ")?;
-                    println!("value: {:#04x} (expected 0x80)", value);
-
                     let mut lna = 0x00;
                     self.spi_read_register(LoRaRegister::LNA, &mut lna)
                         .context("LoRa::start: ")?;
