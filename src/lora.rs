@@ -468,11 +468,12 @@ impl LoRa {
         self.spi_write_register(LoRaRegister::MODEM_CONFIG_3, 0x04u8)
             .context("LoRa::start")?;
         print_version_tag();
-        println!("Bandwidth: {}", self.get_bandwidth().context("LoRa::start")?);
-        println!("Coding rate: {}", self.get_coding_rate().context("LoRa::start")?);
-        println!("Spreading factor: {}", self.get_spreading_factor().context("LoRa::start")?);
-        println!("Frequency: {:?}", self.get_frequency().context("LoRa::start")?);
-        println!("[MODE]: {:?}", self.mode);
+        println!("+-------------------------+");
+        println!("| Bandwidth: {}            |", self.get_bandwidth().context("LoRa::start")?);
+        println!("| Coding rate: {}          |", self.get_coding_rate().context("LoRa::start")?);
+        println!("| Spreading factor: {:02}    |", self.get_spreading_factor().context("LoRa::start")?);
+        println!("| Mode: {:?}                |", self.mode);
+        println!("+-------------------------+");
         for _ in 0..10000 {
             match self.mode {
                 Mode::RX => {
@@ -486,19 +487,26 @@ impl LoRa {
                             std::process::exit(-1);
                         }
                     };
+                    println!();
+                    println!("--------------------------------------------------------------------------------");
+                    println!();
 
                     if crc_error {
-                        println!("CRC Error");
+                        println!("+-----------+");
+                        println!("| CRC Error |");
+                        println!("+-----------+");
+                        println!();
                     }
 
                     let packet = match Packet::new(&received_buffer) {
                         Ok(packet) => {
-                            println!("Received packet: {:?}", packet);
-                            if !crc_error { info!("Received packet: {:?}", packet);}
+                            println!("Received: {:#?}", packet);
+                            if !crc_error { info!("Received: {:?}", packet);}
                             packet
                         },
                         Err(e) => {
                             println!("Bad package: {:?}", e);
+                            println!();
                             println!("Received: {:02X?}", received_buffer);
                             self.sleep_mode().context("LoRa::start")?;
                             continue;
