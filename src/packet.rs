@@ -2,6 +2,7 @@ use core::fmt;
 
 use serde::{Deserialize, Serialize};
 use anyhow::{anyhow, Context, Result};
+use std::hash::{DefaultHasher, Hash, Hasher};
 use crate::conversions::*;
 
 pub const DATA_SIZE: usize = 59;
@@ -15,7 +16,7 @@ pub const PACKET_MSG_COUNT_IDX: usize = 3;
 pub const PACKET_DATA_TYPE_IDX: usize = 4;
 
 #[repr(u8)]
-#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
+#[derive(Debug, Deserialize, Serialize, Clone, Copy, Hash)]
 pub enum DataType {
     BME280 = 1,
     BMA400 = 2,
@@ -37,7 +38,7 @@ impl DataType {
     }
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Hash)]
 pub enum Data {
     Bme280(BME280),
     Bma400(BMA400),
@@ -100,27 +101,27 @@ impl GetData<String> for Data {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Hash)]
 pub struct BME280 {
     pub temperature: u8,
     pub humidity: u8,
     pub pressure: u8,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Hash)]
 pub struct BMA400 {
     pub x: u64,
     pub y: u64,
     pub z: u64,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Hash)]
 pub struct MQ2 {
     pub gas_type: u8,
     pub value: u128,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Hash)]
 pub struct Gps {
     pub status: u8,
     pub altitude: i16,
@@ -169,7 +170,7 @@ impl fmt::Debug for Data {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Hash)]
 pub struct Packet {
     pub version: u8,
     pub id: u8,
@@ -202,5 +203,581 @@ impl Packet {
 
         packet.append(&mut data);
         Ok(packet)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn calculate_hash<T: Hash>(t: &T) -> u64 {
+        let mut s = DefaultHasher::new();
+        t.hash(&mut s);
+        s.finish()
+    }
+
+    #[test]
+    fn serialize_bme280_correct() {
+        let packet = Packet {
+            version: 0x33,
+            id: 0x22,
+            msg_id: 0x11,
+            msg_count: 0x00,
+            data_type: DataType::BME280,
+            data: Data::Bme280(BME280 {
+                temperature: 23,
+                humidity: 45,
+                pressure: 67,
+            }),
+        };
+
+        let expected_data: Vec<u8> = vec![0x33, 0x22, 0x11, 0x00, 0x01, 0x17, 0x2D, 0x43];
+        let serialized_packet = packet.to_bytes().unwrap();
+
+        assert_eq!(serialized_packet, expected_data);
+    }
+
+    #[test]
+    fn deserialize_bme280_correct() {
+        let bytes: Vec<u8> = vec![0x33, 0x22, 0x11, 0x00, 0x01, 0x17, 0x2D, 0x43];
+
+        let expected_packet = Packet {
+            version: 0x33,
+            id: 0x22,
+            msg_id: 0x11,
+            msg_count: 0x00,
+            data_type: DataType::BME280,
+            data: Data::Bme280(BME280 {
+                temperature: 23,
+                humidity: 45,
+                pressure: 67,
+            }),
+        };
+
+        let deserialized_data = Packet::new(&bytes).unwrap();
+
+        assert_eq!(calculate_hash(&deserialized_data), calculate_hash(&expected_packet));
+    }
+
+    #[test]
+    fn deserialize_bme280_data_too_short() {
+        let bytes: Vec<u8> = vec![0x33, 0x22, 0x11, 0x00, 0x01, 0x17, 0x2D];
+
+        let expected_packet = Packet {
+            version: 0x33,
+            id: 0x22,
+            msg_id: 0x11,
+            msg_count: 0x00,
+            data_type: DataType::BME280,
+            data: Data::Bme280(BME280 {
+                temperature: 23,
+                humidity: 45,
+                pressure: 67,
+            }),
+        };
+
+        let deserialized_data = Packet::new(&bytes).unwrap();
+
+        assert_ne!(calculate_hash(&deserialized_data), calculate_hash(&expected_packet));
+    }
+
+    #[test]
+    fn deserialize_bme280_too_long() {
+        let bytes: Vec<u8> = vec![0x33, 0x22, 0x11, 0x00, 0x01, 0x17, 0x2D, 0x43, 0xFF];
+
+        let expected_packet = Packet {
+            version: 0x33,
+            id: 0x22,
+            msg_id: 0x11,
+            msg_count: 0x00,
+            data_type: DataType::BME280,
+            data: Data::Bme280(BME280 {
+                temperature: 23,
+                humidity: 45,
+                pressure: 67,
+            }),
+        };
+
+        let deserialized_data = Packet::new(&bytes).unwrap();
+
+        assert_ne!(calculate_hash(&deserialized_data), calculate_hash(&expected_packet));
+    }
+
+    #[test]
+    fn deserialize_bme280_packet_too_short() {
+        let bytes: Vec<u8> = vec![0x33, 0x22, 0x11];
+
+        let expected_packet = Packet {
+            version: 0x33,
+            id: 0x22,
+            msg_id: 0x11,
+            msg_count: 0x00,
+            data_type: DataType::BME280,
+            data: Data::Bme280(BME280 {
+                temperature: 23,
+                humidity: 45,
+                pressure: 67,
+            }),
+        };
+
+        let deserialized_data = Packet::new(&bytes).unwrap();
+
+        assert_ne!(calculate_hash(&deserialized_data), calculate_hash(&expected_packet));
+    }
+
+    #[test]
+    fn serialize_bma400_correct() {
+        let packet = Packet {
+            version: 0x33,
+            id: 0x22,
+            msg_id: 0x11,
+            msg_count: 0x00,
+            data_type: DataType::BMA400,
+            data: Data::Bma400(BMA400 {
+                x: 255,
+                y: 256,
+                z: 1024,
+            }),
+        };
+
+        let expected_data: Vec<u8> = vec![0x33, 0x22, 0x11, 0x00, 0x02,
+            0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+        let serialized_packet = packet.to_bytes().unwrap();
+
+        assert_eq!(serialized_packet, expected_data);
+    }
+
+    #[test]
+    fn deserialize_bma400_correct() {
+        let bytes: Vec<u8> = vec![0x33, 0x22, 0x11, 0x00, 0x02,
+            0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+
+        let expected_packet = Packet {
+            version: 0x33,
+            id: 0x22,
+            msg_id: 0x11,
+            msg_count: 0x00,
+            data_type: DataType::BMA400,
+            data: Data::Bma400(BMA400 {
+                x: 255,
+                y: 256,
+                z: 1024,
+            }),
+        };
+
+        let deserialized_data = Packet::new(&bytes).unwrap();
+
+        assert_eq!(calculate_hash(&deserialized_data), calculate_hash(&expected_packet));
+    }
+
+    #[test]
+    fn deserialize_bma400_data_too_short() {
+        let bytes: Vec<u8> = vec![0x33, 0x22, 0x11, 0x00, 0x02,
+            0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00];
+
+        let expected_packet = Packet {
+            version: 0x33,
+            id: 0x22,
+            msg_id: 0x11,
+            msg_count: 0x00,
+            data_type: DataType::BMA400,
+            data: Data::Bma400(BMA400 {
+                x: 255,
+                y: 256,
+                z: 1024,
+            }),
+        };
+
+        let deserialized_data = Packet::new(&bytes).unwrap();
+
+        assert_ne!(calculate_hash(&deserialized_data), calculate_hash(&expected_packet));
+    }
+
+    #[test]
+    fn deserialize_bma400_too_long() {
+        let bytes: Vec<u8> = vec![0x33, 0x22, 0x11, 0x00, 0x02,
+            0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF];
+
+        let expected_packet = Packet {
+            version: 0x33,
+            id: 0x22,
+            msg_id: 0x11,
+            msg_count: 0x00,
+            data_type: DataType::BMA400,
+            data: Data::Bma400(BMA400 {
+                x: 255,
+                y: 256,
+                z: 1024,
+            }),
+        };
+
+        let deserialized_data = Packet::new(&bytes).unwrap();
+
+        assert_ne!(calculate_hash(&deserialized_data), calculate_hash(&expected_packet));
+    }
+
+    #[test]
+    fn deserialize_bme400_packet_too_short() {
+        let bytes: Vec<u8> = vec![0x33, 0x22, 0x11];
+
+        let expected_packet = Packet {
+            version: 0x33,
+            id: 0x22,
+            msg_id: 0x11,
+            msg_count: 0x00,
+            data_type: DataType::BMA400,
+            data: Data::Bma400(BMA400 {
+                x: 255,
+                y: 256,
+                z: 1024,
+            }),
+        };
+
+        let deserialized_data = Packet::new(&bytes).unwrap();
+
+        assert_ne!(calculate_hash(&deserialized_data), calculate_hash(&expected_packet));
+    }
+
+    #[test]
+    fn serialize_mq2_correct() {
+        let packet = Packet {
+            version: 0x33,
+            id: 0x22,
+            msg_id: 0x11,
+            msg_count: 0x00,
+            data_type: DataType::MQ2,
+            data: Data::Mq2(MQ2 {
+                gas_type: 0x01,
+                value: u128::MAX,
+            }),
+        };
+
+        let expected_data: Vec<u8> = vec![0x33, 0x22, 0x11, 0x00, 0x03,
+            0x01,
+            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
+        let serialized_packet = packet.to_bytes().unwrap();
+
+        assert_eq!(serialized_packet, expected_data);
+    }
+
+    #[test]
+    fn deserialize_mq2_correct() {
+        let bytes: Vec<u8> = vec![0x33, 0x22, 0x11, 0x00, 0x03,
+            0x01,
+            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
+
+        let expected_packet = Packet {
+            version: 0x33,
+            id: 0x22,
+            msg_id: 0x11,
+            msg_count: 0x00,
+            data_type: DataType::MQ2,
+            data: Data::Mq2(MQ2 {
+                gas_type: 0x01,
+                value: u128::MAX,
+            }),
+        };
+
+        let deserialized_data = Packet::new(&bytes).unwrap();
+
+        assert_eq!(calculate_hash(&deserialized_data), calculate_hash(&expected_packet));
+    }
+
+    #[test]
+    fn deserialize_mq2_data_too_short() {
+        let bytes: Vec<u8> = vec![0x33, 0x22, 0x11, 0x00, 0x03,
+            0x01,
+            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
+
+        let expected_packet = Packet {
+            version: 0x33,
+            id: 0x22,
+            msg_id: 0x11,
+            msg_count: 0x00,
+            data_type: DataType::MQ2,
+            data: Data::Mq2(MQ2 {
+                gas_type: 0x01,
+                value: u128::MAX,
+            }),
+        };
+
+        let deserialized_data = Packet::new(&bytes).unwrap();
+
+        assert_ne!(calculate_hash(&deserialized_data), calculate_hash(&expected_packet));
+    }
+
+    #[test]
+    fn deserialize_mq2_too_long() {
+        let bytes: Vec<u8> = vec![0x33, 0x22, 0x11, 0x00, 0x03,
+            0x01,
+            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
+
+        let expected_packet = Packet {
+            version: 0x33,
+            id: 0x22,
+            msg_id: 0x11,
+            msg_count: 0x00,
+            data_type: DataType::MQ2,
+            data: Data::Mq2(MQ2 {
+                gas_type: 0x01,
+                value: u128::MAX,
+            }),
+        };
+
+        let deserialized_data = Packet::new(&bytes).unwrap();
+
+        assert_ne!(calculate_hash(&deserialized_data), calculate_hash(&expected_packet));
+    }
+
+    #[test]
+    fn deserialize_mq2_packet_too_short() {
+        let bytes: Vec<u8> = vec![0x33, 0x22, 0x11];
+
+        let expected_packet = Packet {
+            version: 0x33,
+            id: 0x22,
+            msg_id: 0x11,
+            msg_count: 0x00,
+            data_type: DataType::MQ2,
+            data: Data::Mq2(MQ2 {
+                gas_type: 0x01,
+                value: u128::MAX,
+            }),
+        };
+
+        let deserialized_data = Packet::new(&bytes).unwrap();
+
+        assert_ne!(calculate_hash(&deserialized_data), calculate_hash(&expected_packet));
+    }
+
+    #[test]
+    fn serialize_gps_correct() {
+        let packet = Packet {
+            version: 0x33,
+            id: 0x22,
+            msg_id: 0x11,
+            msg_count: 0x00,
+            data_type: DataType::Gps,
+            data: Data::Gps(Gps {
+                status: u8::MAX,
+                altitude: i16::MAX, // FIXME
+                latitude: i32::MAX,
+                longitude: i32::MAX,
+            }),
+        };
+
+        let expected_data: Vec<u8> = vec![0x33, 0x22, 0x11, 0x00, 0x04,
+            0xFF, 
+            0xFF, 0x7F,
+            0xFF, 0xFF, 0xFF, 0x7F, 
+            0xFF, 0xFF, 0xFF, 0x7F]; // FIXME (signed ints)
+        let serialized_packet = packet.to_bytes().unwrap();
+
+        assert_eq!(serialized_packet, expected_data);
+    }
+
+    #[test]
+    fn deserialize_gps_correct() {
+        let bytes: Vec<u8> = vec![0x33, 0x22, 0x11, 0x00, 0x04,
+            0xFF, 
+            0xFF, 0x7F,
+            0xFF, 0xFF, 0xFF, 0x7F, 
+            0xFF, 0xFF, 0xFF, 0x7F];
+
+        let expected_packet = Packet {
+            version: 0x33,
+            id: 0x22,
+            msg_id: 0x11,
+            msg_count: 0x00,
+            data_type: DataType::Gps,
+            data: Data::Gps(Gps {
+                status: u8::MAX,
+                altitude: i16::MAX, // FIXME
+                latitude: i32::MAX,
+                longitude: i32::MAX,
+            }),
+        };
+
+        let deserialized_data = Packet::new(&bytes).unwrap();
+
+        assert_eq!(calculate_hash(&deserialized_data), calculate_hash(&expected_packet));
+    }
+
+    #[test]
+    fn deserialize_gps_data_too_short() {
+        let bytes: Vec<u8> = vec![0x33, 0x22, 0x11, 0x00, 0x04,
+            0xFF, 
+            0xFF, 0x7F,
+            0xFF, 0xFF, 0xFF, 0x7F, 
+            0xFF, 0xFF, 0xFF];
+
+        let expected_packet = Packet {
+            version: 0x33,
+            id: 0x22,
+            msg_id: 0x11,
+            msg_count: 0x00,
+            data_type: DataType::Gps,
+            data: Data::Gps(Gps {
+                status: u8::MAX,
+                altitude: i16::MAX, // FIXME
+                latitude: i32::MAX,
+                longitude: i32::MAX,
+            }),
+        };
+
+        let deserialized_data = Packet::new(&bytes).unwrap();
+
+        assert_ne!(calculate_hash(&deserialized_data), calculate_hash(&expected_packet));
+    }
+
+    #[test]
+    fn deserialize_gps_too_long() {
+        let bytes: Vec<u8> = vec![0x33, 0x22, 0x11, 0x00, 0x04,
+            0xFF, 
+            0xFF, 0x7F,
+            0xFF, 0xFF, 0xFF, 0x7F, 
+            0xFF, 0xFF, 0xFF, 0x7F, 0xFF];
+
+        let expected_packet = Packet {
+            version: 0x33,
+            id: 0x22,
+            msg_id: 0x11,
+            msg_count: 0x00,
+            data_type: DataType::Gps,
+            data: Data::Gps(Gps {
+                status: u8::MAX,
+                altitude: i16::MAX, // FIXME
+                latitude: i32::MAX,
+                longitude: i32::MAX,
+            }),
+        };
+
+        let deserialized_data = Packet::new(&bytes).unwrap();
+
+        assert_ne!(calculate_hash(&deserialized_data), calculate_hash(&expected_packet));
+    }
+
+    #[test]
+    fn deserialize_gps_packet_too_short() {
+        let bytes: Vec<u8> = vec![0x33, 0x22, 0x11];
+
+        let expected_packet = Packet {
+            version: 0x33,
+            id: 0x22,
+            msg_id: 0x11,
+            msg_count: 0x00,
+            data_type: DataType::Gps,
+            data: Data::Gps(Gps {
+                status: u8::MAX,
+                altitude: i16::MAX, // FIXME
+                latitude: i32::MAX,
+                longitude: i32::MAX,
+            }),
+        };
+
+        let deserialized_data = Packet::new(&bytes).unwrap();
+
+        assert_ne!(calculate_hash(&deserialized_data), calculate_hash(&expected_packet));
+    }
+
+    #[test]
+    fn serialize_sms_correct() {
+        let packet = Packet {
+            version: 0x33,
+            id: 0x22,
+            msg_id: 0x11,
+            msg_count: 0x00,
+            data_type: DataType::Sms,
+            data: Data::Sms(String::from("AB")),
+        };
+
+        let expected_data: Vec<u8> = vec![0x33, 0x22, 0x11, 0x00, 0x20, 0x41, 0x42];
+        let serialized_packet = packet.to_bytes().unwrap();
+
+        assert_eq!(serialized_packet, expected_data);
+    }
+    
+    #[test]
+    fn deserialize_sms_correct() {
+        let bytes: Vec<u8> = vec![0x33, 0x22, 0x11, 0x00, 0x20, 0x41, 0x42];
+
+        let expected_packet = Packet {
+            version: 0x33,
+            id: 0x22,
+            msg_id: 0x11,
+            msg_count: 0x00,
+            data_type: DataType::Sms,
+            data: Data::Sms(String::from("AB")),
+        };
+
+        let deserialized_data = Packet::new(&bytes).unwrap();
+
+        assert_eq!(calculate_hash(&deserialized_data), calculate_hash(&expected_packet));
+    }
+
+    #[test]
+    fn deserialize_sms_data_too_short() {
+        let bytes: Vec<u8> = vec![0x33, 0x22, 0x11, 0x00, 0x20, 0x41];
+
+        let expected_packet = Packet {
+            version: 0x33,
+            id: 0x22,
+            msg_id: 0x11,
+            msg_count: 0x00,
+            data_type: DataType::Sms,
+            data: Data::Sms(String::from("AB")),
+        };
+
+        let deserialized_data = Packet::new(&bytes).unwrap();
+
+        assert_ne!(calculate_hash(&deserialized_data), calculate_hash(&expected_packet));
+    }
+
+    #[test]
+    fn deserialize_sms_too_long() {
+        let bytes: Vec<u8> = vec![0x33, 0x22, 0x11, 0x00, 0x20, 0x41, 0x42, 0xFF];
+
+        let expected_packet = Packet {
+            version: 0x33,
+            id: 0x22,
+            msg_id: 0x11,
+            msg_count: 0x00,
+            data_type: DataType::Sms,
+            data: Data::Sms(String::from("AB")),
+        };
+
+        let deserialized_data = Packet::new(&bytes).unwrap();
+
+        assert_ne!(calculate_hash(&deserialized_data), calculate_hash(&expected_packet));
+    }
+
+    #[test]
+    fn deserialize_sms_packet_too_short() {
+        let bytes: Vec<u8> = vec![0x33, 0x22, 0x11];
+
+        let expected_packet = Packet {
+            version: 0x33,
+            id: 0x22,
+            msg_id: 0x11,
+            msg_count: 0x00,
+            data_type: DataType::Sms,
+            data: Data::Sms(String::from("AB")),
+        };
+
+        let deserialized_data = Packet::new(&bytes).unwrap();
+
+        assert_ne!(calculate_hash(&deserialized_data), calculate_hash(&expected_packet));
     }
 }
