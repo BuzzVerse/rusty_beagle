@@ -8,6 +8,7 @@ use std::{fs, process};
 pub struct Config {
     pub mqtt_config: MQTTConfig,
     pub lora_config: LoRaConfig,
+    pub bme_config: BME280Config
 }
 
 impl Config {
@@ -57,6 +58,14 @@ pub struct MQTTConfig {
     pub login: String,
     pub password: String,
     pub topic: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct BME280Config {
+    pub i2c_bus_path: String,
+    pub i2c_address: u8,
+    pub measurement_interval: u64,
+    pub enabled: bool,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
