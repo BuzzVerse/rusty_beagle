@@ -39,6 +39,18 @@ fn main() {
     let radio_config = config.lora_config.radio_config.clone();
     let bme_config: BME280Config = config.bme_config.clone();
 
+    if bme_config.enabled {
+        thread::spawn(move || {
+            let measurement_interval = bme_config.measurement_interval;
+            let mut bme280 = BME280Sensor::new(bme_config);
+
+            loop {
+                bme280.print();
+                thread::sleep(Duration::from_secs(measurement_interval));
+            }
+        });
+    }
+
     let mut lora = match LoRa::from_config(&config.lora_config) {
         Ok(lora) => {
             info!("LoRa object created successfully.");
@@ -51,20 +63,4 @@ fn main() {
         }
     };
     handle_error!(lora.start(radio_config));
-
-    if bme_config.enabled {
-        thread::spawn(move || {
-            let mut bme280 = BME280Sensor::new(bme_config);
-
-            loop {
-                let (temperature, pressure, humidity) = bme280.read_measurements();
-
-                println!("Temperature: {:.1} °C", temperature);
-                println!("Pressure: {:.1} hPa", pressure);
-                println!("Humidity: {:.1} %", humidity);
-
-                thread::sleep(Duration::from_secs(10));
-            }
-        });
-    }
 }

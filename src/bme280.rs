@@ -27,4 +27,14 @@ impl BME280Sensor {
             measurements.humidity,
         )
     }
+
+    pub fn print(&mut self) {
+        let (temperature, pressure, humidity) = self.read_measurements();
+
+        println!("+----------------------------+");
+        println!("| Temperature: {:6.1} °C     |", temperature);
+        println!("| Pressure:    {:7.1} hPa   |", pressure);
+        println!("| Humidity:    {:6.1} %      |", humidity);
+        println!("+----------------------------+");
+    }
 }
