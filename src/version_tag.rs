@@ -25,18 +25,5 @@ pub fn print_version_tag() {
         println!("   | |   | (      | (\\ (   | |   | |   | |      | |   | (      ");
         println!("   | |   | (____/\\| ) \\ \\__| )   ( |___) (___   | |   | (____/\\");
         println!("   )_(   (_______/|/   \\__/|/     \\|\\_______/   )_(   (_______/");
-        println!("");
-        println!("       __");
-        println!("     _/o \\_");
-        println!("    /_     \\");
-        println!("   // \\_    \\");
-        println!("  //   \\_    \\");
-        println!(" //     \\_    \\");
-        println!("//       \\_    \\");
-        println!("|         |     |");
-        println!(" \\         \\_  /");
-        println!("  \\  \\_      \\/");
-        println!("   \\__ \\_    _/");
-        println!("       \\__  /");
-        println!("          \\/");
+        println!();
 }
