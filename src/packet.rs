@@ -33,7 +33,7 @@ impl DataType {
             3 => Ok(Self::MQ2),
             4 => Ok(Self::Gps),
             32 => Ok(Self::Sms),
-            _ => Err(anyhow!("Invalid data type")).context("DataType::new: "),
+            _ => Err(anyhow!("Invalid data type")).context("DataType::new"),
         }
     }
 }
@@ -124,7 +124,7 @@ pub struct MQ2 {
 #[derive(Debug, Deserialize, Serialize, Hash)]
 pub struct Gps {
     pub status: u8,
-    pub altitude: i16,
+    pub altitude: u16,
     pub latitude: i32,
     pub longitude: i32,
 }
@@ -133,27 +133,57 @@ impl Data {
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
         let data_type = DataType::new(bytes[PACKET_DATA_TYPE_IDX]).unwrap();
         match data_type {
-            DataType::BME280 => Ok(Data::Bme280(BME280 {
-                temperature: bytes[META_DATA_SIZE],
-                humidity: bytes[META_DATA_SIZE + 1],
-                pressure: bytes[META_DATA_SIZE + 2],
-            })),
-            DataType::BMA400 => Ok(Data::Bma400(BMA400 {
-                x: vec_to_u64(bytes, META_DATA_SIZE).context("Data::from_bytes: ")?,
-                y: vec_to_u64(bytes, META_DATA_SIZE + 8).context("Data::from_bytes: ")?,
-                z: vec_to_u64(bytes, META_DATA_SIZE + 16).context("Data::from_bytes: ")?,
-            })),
-            DataType::MQ2 => Ok(Data::Mq2(MQ2 {
-                gas_type: bytes[META_DATA_SIZE],
-                value: vec_to_u128(bytes, META_DATA_SIZE + 1).context("Data::from_bytes: ")?,
-            })),
-            DataType::Gps => Ok(Data::Gps(Gps {
-                status: bytes[META_DATA_SIZE],
-                altitude: vec_to_i16(bytes, META_DATA_SIZE + 1).context("Data::from_bytes: ")?,
-                latitude: vec_to_i32(bytes, META_DATA_SIZE + 3).context("Data::from_bytes: ")?,
-                longitude: vec_to_i32(bytes, META_DATA_SIZE + 7).context("Data::from_bytes: ")?,
-            })),
-            DataType::Sms => Ok(Data::Sms(String::from_utf8(bytes[META_DATA_SIZE..bytes.len()].to_vec()).context("Data::from_bytes: ")?)),
+            DataType::BME280 => {
+                if bytes.len() != 8 {
+                    return Err(anyhow!("Incorrect length, was {}, should be 8", bytes.len()))
+                        .context("Data::from_bytes");
+                }
+                Ok(Data::Bme280(BME280 {
+                    temperature: bytes[META_DATA_SIZE],
+                    humidity: bytes[META_DATA_SIZE + 1],
+                    pressure: bytes[META_DATA_SIZE + 2],
+                }))
+            },
+            DataType::BMA400 => {
+                if bytes.len() != 29 {
+                    return Err(anyhow!("Incorrect length, was {}, should be 29", bytes.len()))
+                        .context("Data::from_bytes");
+                }
+                Ok(Data::Bma400(BMA400 {
+                    x: vec_to_u64(bytes, META_DATA_SIZE).context("Data::from_bytes")?,
+                    y: vec_to_u64(bytes, META_DATA_SIZE + 8).context("Data::from_bytes")?,
+                    z: vec_to_u64(bytes, META_DATA_SIZE + 16).context("Data::from_bytes")?,
+                }))
+            },
+            DataType::MQ2 => {
+                if bytes.len() != 22 {
+                    return Err(anyhow!("Incorrect length, was {}, should be 22", bytes.len()))
+                        .context("Data::from_bytes");
+                }
+                Ok(Data::Mq2(MQ2 {
+                    gas_type: bytes[META_DATA_SIZE],
+                    value: vec_to_u128(bytes, META_DATA_SIZE + 1).context("Data::from_bytes")?,
+                })) 
+            },
+            DataType::Gps => {
+                if bytes.len() != 16 {
+                    return Err(anyhow!("Incorrect length, was {}, should be 16", bytes.len()))
+                        .context("Data::from_bytes");
+                }
+                Ok(Data::Gps(Gps {
+                    status: bytes[META_DATA_SIZE],
+                    altitude: vec_to_u16(bytes, META_DATA_SIZE + 1).context("Data::from_bytes")?,
+                    latitude: vec_to_i32(bytes, META_DATA_SIZE + 3).context("Data::from_bytes")?,
+                    longitude: vec_to_i32(bytes, META_DATA_SIZE + 7).context("Data::from_bytes")?,
+                }))
+            },
+            DataType::Sms => {
+                if bytes.len() < 6 {
+                    return Err(anyhow!("Incorrect length, was {}, should be at least 6", bytes.len()))
+                        .context("Data::from_bytes");
+                }
+                Ok(Data::Sms(String::from_utf8(bytes[META_DATA_SIZE..bytes.len()].to_vec()).context("Data::from_bytes")?))
+            },
         }
     }
 }
@@ -182,22 +212,23 @@ pub struct Packet {
 
 impl Packet {
     pub fn new(bytes: &[u8]) -> Result<Self> {
+        if bytes.len() < 5 { return Err(anyhow!("Incorrect length, was {}", bytes.len())) }
         let version = bytes[PACKET_VERSION_IDX];
         let id = bytes[PACKET_ID_IDX];
         let msg_id = bytes[PACKET_MSG_ID_IDX];
         let msg_count = bytes[PACKET_MSG_COUNT_IDX];
-        let data_type = DataType::new(bytes[PACKET_DATA_TYPE_IDX]).context("Packet::new: ")?; 
-        let data = Data::from_bytes(bytes).context("Packet::new: ")?;
+        let data_type = DataType::new(bytes[PACKET_DATA_TYPE_IDX]).context("Packet::new")?; 
+        let data = Data::from_bytes(bytes).context("Packet::new")?;
 
         Ok(Self { version, id, msg_id, msg_count, data_type, data })
     }
     pub fn to_bytes(&self) -> Result<Vec<u8>> {
         let mut packet = vec![self.version, self.id, self.msg_id, self.msg_count, self.data_type as u8];
         let mut data = match &self.data {
-            Data::Bme280(data) => bincode::serialize(data).context("Packet::to_bytes: ")?,
-            Data::Bma400(data) => bincode::serialize(data).context("Packet::to_bytes: ")?,
-            Data::Mq2(data) => bincode::serialize(data).context("Packet::to_bytes: ")?,
-            Data::Gps(data) => bincode::serialize(data).context("Packet::to_bytes: ")?,
+            Data::Bme280(data) => bincode::serialize(data).context("Packet::to_bytes")?,
+            Data::Bma400(data) => bincode::serialize(data).context("Packet::to_bytes")?,
+            Data::Mq2(data) => bincode::serialize(data).context("Packet::to_bytes")?,
+            Data::Gps(data) => bincode::serialize(data).context("Packet::to_bytes")?,
             Data::Sms(data) => data.as_bytes().to_vec(),
         };
 
