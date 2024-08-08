@@ -212,7 +212,9 @@ pub struct Packet {
 
 impl Packet {
     pub fn new(bytes: &[u8]) -> Result<Self> {
-        if bytes.len() < 5 { return Err(anyhow!("Incorrect length, was {}", bytes.len())) }
+        if bytes.len() < 5  || bytes.len() > 64 {
+            return Err(anyhow!("Incorrect length, was {}", bytes.len()));
+        }
         let version = bytes[PACKET_VERSION_IDX];
         let id = bytes[PACKET_ID_IDX];
         let msg_id = bytes[PACKET_MSG_ID_IDX];
