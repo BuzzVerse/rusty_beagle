@@ -2,7 +2,7 @@ use core::fmt;
 
 use serde::{Deserialize, Serialize};
 use anyhow::{anyhow, Context, Result};
-use std::hash::{DefaultHasher, Hash, Hasher};
+use std::hash::Hash;
 use crate::conversions::*;
 
 pub const DATA_SIZE: usize = 59;
@@ -47,7 +47,7 @@ pub enum Data {
     Sms(String),
 }
 
-pub trait GetData<T> {
+trait GetData<T> {
     fn get_data(&self) -> Option<&T>;
 }
 
@@ -212,7 +212,7 @@ pub struct Packet {
 
 impl Packet {
     pub fn new(bytes: &[u8]) -> Result<Self> {
-        if bytes.len() < 5  || bytes.len() > 64 {
+        if bytes.len() < META_DATA_SIZE || bytes.len() > PACKET_SIZE {
             return Err(anyhow!("Incorrect length, was {}", bytes.len()));
         }
         let version = bytes[PACKET_VERSION_IDX];
@@ -242,6 +242,7 @@ impl Packet {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use::std::hash::{DefaultHasher, Hasher};
 
     fn calculate_hash<T: Hash>(t: &T) -> u64 {
         let mut s = DefaultHasher::new();

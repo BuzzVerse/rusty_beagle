@@ -357,18 +357,6 @@ impl LoRa {
         Ok((value >> 4) + 8)
     }
 
-    pub fn get_frequency(&mut self) -> Result<[u8; 3]> {
-        let mut values: [u8; 3] = [0, 0, 0];
-        self.spi_read_register(LoRaRegister::FRF_MSB, &mut values[0])
-            .context("LoRa::get_frequency")?;
-        self.spi_read_register(LoRaRegister::FRF_MID, &mut values[1])
-            .context("LoRa::get_frequency")?;
-        self.spi_read_register(LoRaRegister::FRF_LSB, &mut values[2])
-            .context("LoRa::get_frequency")?;
-
-        Ok(values)
-    }
-
     pub fn config_radio(&mut self, radio_config: RadioConfig) -> Result<()> {
         self.set_frequency(433_000_000).context("LoRa::config_radio")?;
         self.set_bandwidth(radio_config.bandwidth)
