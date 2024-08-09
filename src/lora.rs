@@ -4,10 +4,10 @@ use std::thread::sleep;
 use crate::config::RadioConfig;
 use crate::defines::*;
 use crate::packet::{Data, DataType, Packet, BME280};
-use crate::version_tag::{print_version_tag, print_rusty_beagle};
+use crate::version_tag::{print_rusty_beagle, print_version_tag};
 use crate::{GPIOPin, GPIOPinNumber, LoRaConfig, Mode};
 use anyhow::{anyhow, Context, Result};
-use gpiod::{Chip, Lines, Options, Output, Input, Edge, EdgeDetect};
+use gpiod::{Chip, Edge, EdgeDetect, Input, Lines, Options, Output};
 use log::{error, info};
 use spidev::{SpiModeFlags, Spidev, SpidevOptions, SpidevTransfer};
 
@@ -53,7 +53,11 @@ impl LoRa {
         let dio0_pin = MockGPIO {};
         let mode = _lora_config.mode.clone();
 
-        Ok(LoRa { mock_registers, dio0_pin, mode })
+        Ok(LoRa {
+            mock_registers,
+            dio0_pin,
+            mode,
+        })
     }
 
     #[cfg(target_arch = "x86_64")]
@@ -95,8 +99,10 @@ impl LoRa {
             .build();
         spidev.configure(&spi_options)?;
 
-        let reset_pin = Self::config_output_pin(lora_config.reset_gpio).context("LoRa::from_config")?;
-        let dio0_pin = Self::config_input_pin(lora_config.dio0_gpio).context("LoRa::from_config")?;
+        let reset_pin =
+            Self::config_output_pin(lora_config.reset_gpio).context("LoRa::from_config")?;
+        let dio0_pin =
+            Self::config_input_pin(lora_config.dio0_gpio).context("LoRa::from_config")?;
 
         let mode = lora_config.mode.clone();
 
@@ -112,7 +118,6 @@ impl LoRa {
 
     #[cfg(target_arch = "arm")]
     fn config_output_pin(pin_number: GPIOPinNumber) -> Result<gpiod::Lines<Output>> {
-
         let pin = GPIOPin::from_gpio_pin_number(pin_number);
 
         let chip = match Chip::new(pin.chip) {
@@ -132,7 +137,6 @@ impl LoRa {
 
     #[cfg(target_arch = "arm")]
     fn config_input_pin(pin_number: GPIOPinNumber) -> Result<gpiod::Lines<Input>> {
-
         let pin = GPIOPin::from_gpio_pin_number(pin_number);
 
         let chip = match Chip::new(pin.chip) {
@@ -394,7 +398,8 @@ impl LoRa {
         loop {
             let dio0_event = self.dio0_pin.read_event().context("LoRa::receive_packet")?;
 
-            if dio0_event.edge == Edge::Rising { // packet is received on rising edge of DIO0
+            if dio0_event.edge == Edge::Rising {
+                // packet is received on rising edge of DIO0
                 let mut has_crc_error = false;
                 self.has_crc_error(&mut has_crc_error)
                     .context("LoRa::receive_packet")?;
@@ -418,7 +423,8 @@ impl LoRa {
         self.spi_write_register(LoRaRegister::FIFO_ADDR_PTR, received_address)
             .context("LoRa::receive_packet")?;
 
-        self.read_fifo(&mut buffer).context("LoRa::receive_packet")?;
+        self.read_fifo(&mut buffer)
+            .context("LoRa::receive_packet")?;
 
         Ok(buffer)
     }
@@ -439,7 +445,8 @@ impl LoRa {
         loop {
             let dio0_event = self.dio0_pin.read_event().context("LoRa::send_packet")?;
 
-            if dio0_event.edge == Edge::Rising { // rising edge of DIO0 indicates succesful packet send
+            if dio0_event.edge == Edge::Rising {
+                // rising edge of DIO0 indicates succesful packet send
                 println!("Packet sent.");
                 break;
             }
@@ -492,9 +499,11 @@ impl LoRa {
                     let packet = match Packet::new(&received_buffer) {
                         Ok(packet) => {
                             println!("Received: {:#?}", packet);
-                            if !crc_error { info!("Received: {:?}", packet);}
+                            if !crc_error {
+                                info!("Received: {:?}", packet);
+                            }
                             packet
-                        },
+                        }
                         Err(e) => {
                             println!("Bad package: {:?}", e);
                             println!();
@@ -521,13 +530,14 @@ impl LoRa {
                         msg_id: 0x11,
                         msg_count: 0x00,
                         data_type: DataType::BME280,
-                        data: Data::Bme280(BME280 { 
-                            temperature: 23, 
-                            humidity: 4, 
-                            pressure: 56
+                        data: Data::Bme280(BME280 {
+                            temperature: 23,
+                            humidity: 4,
+                            pressure: 56,
                         }),
                     };
-                    self.send_packet(packet.to_bytes()?).context("LoRa::start")?;
+                    self.send_packet(packet.to_bytes()?)
+                        .context("LoRa::start")?;
                     self.sleep_mode()?;
                     Self::sleep(2000);
                 }
@@ -560,13 +570,14 @@ impl LoRa {
     #[cfg(target_arch = "arm")]
     pub fn config_dio(&mut self) -> Result<()> {
         let mut initial_value = 0x00;
-        self.spi_read_register(LoRaRegister::DIO_MAPPING_1, &mut initial_value).context("LoRa::config_dio")?;
+        self.spi_read_register(LoRaRegister::DIO_MAPPING_1, &mut initial_value)
+            .context("LoRa::config_dio")?;
         match self.mode {
-            Mode::RX => {
-            },
+            Mode::RX => {}
             Mode::TX => {
-                self.spi_write_register(LoRaRegister::DIO_MAPPING_1, initial_value | (0b01 << 6)).context("LoRa::config_dio")?; // DIO0 TxDone
-            },
+                self.spi_write_register(LoRaRegister::DIO_MAPPING_1, initial_value | (0b01 << 6))
+                    .context("LoRa::config_dio")?; // DIO0 TxDone
+            }
         }
 
         Ok(())
@@ -603,7 +614,9 @@ mod tests {
         };
 
         let mut value: u8 = 0x00;
-        assert!(lora.spi_read_register(LoRaRegister::PAYLOAD_LENGTH, &mut value).is_ok());
+        assert!(lora
+            .spi_read_register(LoRaRegister::PAYLOAD_LENGTH, &mut value)
+            .is_ok());
     }
 
     #[test]
@@ -618,7 +631,9 @@ mod tests {
         };
 
         let value: u8 = 0xFF;
-        assert!(lora.spi_write_register(LoRaRegister::PAYLOAD_LENGTH, value).is_ok());
+        assert!(lora
+            .spi_write_register(LoRaRegister::PAYLOAD_LENGTH, value)
+            .is_ok());
     }
 
     #[test]
@@ -672,9 +687,12 @@ mod tests {
 
         let mut mode: u8 = 0x00;
         handle_error!(lora.spi_read_register(LoRaRegister::OP_MODE, &mut mode));
-        assert_eq!((LoRaMode::LONG_RANGE as u8 | LoRaMode::RX_CONTINUOUS as u8), mode);
+        assert_eq!(
+            (LoRaMode::LONG_RANGE as u8 | LoRaMode::RX_CONTINUOUS as u8),
+            mode
+        );
     }
-    
+
     #[test]
     fn transmit_mode_correct() {
         let config = handle_error!(Config::from_file("./conf.ron".to_string()));

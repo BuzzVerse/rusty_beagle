@@ -12,7 +12,7 @@ pub struct Config {
 
 impl Config {
     pub fn from_file(config_path: String) -> Result<Config> {
-        let config_file = fs::read_to_string(config_path).context("Config::from_file")?; 
+        let config_file = fs::read_to_string(config_path).context("Config::from_file")?;
         let config = ron::from_str(config_file.as_str()).context("Config::from_file")?;
         info!("Succesfully read config file.");
         Ok(config)
@@ -155,7 +155,7 @@ mod tests {
     }
 
     #[test]
-    fn incomplete_config() {
+    fn config_incomplete() {
         assert!(Config::from_file("./tests/configs/incomplete_conf.ron".to_string()).is_err());
     }
 }
