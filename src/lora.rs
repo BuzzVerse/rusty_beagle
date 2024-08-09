@@ -359,7 +359,8 @@ impl LoRa {
     }
 
     pub fn config_radio(&mut self, radio_config: RadioConfig) -> Result<()> {
-        self.set_frequency(433_000_000).context("LoRa::config_radio")?;
+        self.set_frequency(radio_config.frequency)
+            .context("LoRa::config_radio")?;
         self.set_bandwidth(radio_config.bandwidth)
             .context("LoRa::config_radio")?;
         self.set_coding_rate(radio_config.coding_rate)

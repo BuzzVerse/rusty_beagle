@@ -48,6 +48,7 @@ pub struct LoRaConfig {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct RadioConfig {
+    pub frequency: u64,
     pub bandwidth: Bandwidth,
     pub coding_rate: CodingRate,
     pub spreading_factor: SpreadingFactor,
