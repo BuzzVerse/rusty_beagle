@@ -333,6 +333,7 @@ impl LoRa {
 
         Ok(())
     }
+
     pub fn get_bandwidth(&mut self) -> Result<u8> {
         let mut value = 0x00;
         self.spi_read_register(LoRaRegister::MODEM_CONFIG_1, &mut value)
@@ -568,5 +569,126 @@ impl LoRa {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::*;
+
+    macro_rules! handle_error {
+        ($func:expr) => {
+            match $func {
+                Err(e) => {
+                    eprintln!("{:?}", e);
+                    error!("{:?}", e);
+                    std::process::exit(-1);
+                }
+                Ok(s) => s,
+            }
+        };
+    }
+
+    #[test]
+    fn spi_read_register_correct() {
+        let config = Config::from_file();
+        let mut lora = match LoRa::from_config(&config.lora_config) {
+            Ok(lora) => lora,
+            Err(e) => {
+                error!("When creating lora object: {e}");
+                std::process::exit(-1);
+            }
+        };
+
+        let mut value: u8 = 0x00;
+        assert!(lora.spi_read_register(LoRaRegister::PAYLOAD_LENGTH, &mut value).is_ok());
+    }
+
+    #[test]
+    fn spi_write_register_correct() {
+        let config = Config::from_file();
+        let mut lora = match LoRa::from_config(&config.lora_config) {
+            Ok(lora) => lora,
+            Err(e) => {
+                error!("When creating lora object: {e}");
+                std::process::exit(-1);
+            }
+        };
+
+        let value: u8 = 0xFF;
+        assert!(lora.spi_write_register(LoRaRegister::PAYLOAD_LENGTH, value).is_ok());
+    }
+
+    #[test]
+    fn standby_mode_correct() {
+        let config = Config::from_file();
+        let mut lora = match LoRa::from_config(&config.lora_config) {
+            Ok(lora) => lora,
+            Err(e) => {
+                error!("When creating lora object: {e}");
+                std::process::exit(-1);
+            }
+        };
+
+        handle_error!(lora.standby_mode());
+
+        let mut mode: u8 = 0x00;
+        handle_error!(lora.spi_read_register(LoRaRegister::OP_MODE, &mut mode));
+        assert_eq!((LoRaMode::LONG_RANGE as u8 | LoRaMode::STDBY as u8), mode);
+    }
+
+    #[test]
+    fn sleep_mode_correct() {
+        let config = Config::from_file();
+        let mut lora = match LoRa::from_config(&config.lora_config) {
+            Ok(lora) => lora,
+            Err(e) => {
+                error!("When creating lora object: {e}");
+                std::process::exit(-1);
+            }
+        };
+
+        handle_error!(lora.sleep_mode());
+
+        let mut mode: u8 = 0x00;
+        handle_error!(lora.spi_read_register(LoRaRegister::OP_MODE, &mut mode));
+        assert_eq!((LoRaMode::LONG_RANGE as u8 | LoRaMode::SLEEP as u8), mode);
+    }
+
+    #[test]
+    fn receive_mode_correct() {
+        let config = Config::from_file();
+        let mut lora = match LoRa::from_config(&config.lora_config) {
+            Ok(lora) => lora,
+            Err(e) => {
+                error!("When creating lora object: {e}");
+                std::process::exit(-1);
+            }
+        };
+
+        handle_error!(lora.receive_mode());
+
+        let mut mode: u8 = 0x00;
+        handle_error!(lora.spi_read_register(LoRaRegister::OP_MODE, &mut mode));
+        assert_eq!((LoRaMode::LONG_RANGE as u8 | LoRaMode::RX_CONTINUOUS as u8), mode);
+    }
+    
+    #[test]
+    fn transmit_mode_correct() {
+        let config = Config::from_file();
+        let mut lora = match LoRa::from_config(&config.lora_config) {
+            Ok(lora) => lora,
+            Err(e) => {
+                error!("When creating lora object: {e}");
+                std::process::exit(-1);
+            }
+        };
+
+        handle_error!(lora.transmit_mode());
+
+        let mut mode: u8 = 0x00;
+        handle_error!(lora.spi_read_register(LoRaRegister::OP_MODE, &mut mode));
+        assert_eq!((LoRaMode::LONG_RANGE as u8 | LoRaMode::TX as u8), mode);
     }
 }
