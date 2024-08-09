@@ -1,7 +1,6 @@
 use crate::defines::{Bandwidth, CodingRate, SpreadingFactor};
 use log::{error, info};
 use serde::{Deserialize, Serialize};
-use std::env;
 use std::{fs, process};
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -11,8 +10,8 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn from_file() -> Config {
-        let config_file = match fs::read_to_string(Config::parse_args()) {
+    pub fn from_file(config_path: String) -> Config {
+        let config_file = match fs::read_to_string(config_path) {
             Ok(s) => s,
             Err(e) => {
                 eprintln!("ERROR {:?}", e.to_string());
@@ -30,21 +29,6 @@ impl Config {
                 eprintln!("ERROR {:?}", e.to_string());
                 error!("While deserializing ron file to config: {e}.");
                 process::exit(-1);
-            }
-        }
-    }
-
-    fn parse_args() -> String {
-        let args: Vec<String> = env::args().collect();
-
-        match args.len() {
-            1 => "./conf.ron".to_string(),
-            2 => args[1].to_string(),
-            _ => {
-                eprintln!("Wrong number of arguments!");
-                println!("Usage: ./rusty_beagle [config file]");
-                error!("Wrong number of arguments.");
-                std::process::exit(-1);
             }
         }
     }
