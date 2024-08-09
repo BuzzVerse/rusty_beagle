@@ -3,10 +3,11 @@ use std::thread::sleep;
 
 use crate::config::RadioConfig;
 use crate::defines::*;
+use crate::mqtt::BlockingQueue;
 use crate::packet::{Data, DataType, Packet, BME280};
 use crate::version_tag::{print_version_tag, print_rusty_beagle};
 use crate::{GPIOPin, GPIOPinNumber, LoRaConfig, Mode};
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Context, Error, Result};
 use gpiod::{Chip, Lines, Options, Output, Input, Edge, EdgeDetect};
 use log::{error, info};
 use spidev::{SpiModeFlags, Spidev, SpidevOptions, SpidevTransfer};
@@ -43,12 +44,12 @@ pub struct MockEvent {
 }
 
 impl LoRa {
-    pub fn sleep(ms: u64) {
-        sleep(time::Duration::from_millis(ms));
+    pub async fn sleep(ms: u64) {
+        tokio::time::sleep(time::Duration::from_millis(ms)).await;
     }
 
     #[cfg(target_arch = "x86_64")]
-    pub fn from_config(_lora_config: &LoRaConfig) -> Result<LoRa> {
+    pub async fn from_config(_lora_config: &LoRaConfig) -> Result<LoRa> {
         let mock_registers = [1; 112];
         let dio0_pin = MockGPIO {};
         let mode = _lora_config.mode.clone();
@@ -57,34 +58,34 @@ impl LoRa {
     }
 
     #[cfg(target_arch = "x86_64")]
-    pub fn spi_read_register(&mut self, register: LoRaRegister, value: &mut u8) -> Result<()> {
+    pub async fn spi_read_register(&mut self, register: LoRaRegister, value: &mut u8) -> Result<()> {
         *value = self.mock_registers[register as usize];
         Ok(())
     }
 
     #[cfg(target_arch = "x86_64")]
-    pub fn spi_write_register(&mut self, register: LoRaRegister, value: u8) -> Result<()> {
+    pub async fn spi_write_register(&mut self, register: LoRaRegister, value: u8) -> Result<()> {
         self.mock_registers[register as usize] = value;
         Ok(())
     }
 
     #[cfg(target_arch = "x86_64")]
-    pub fn reset(&mut self) -> Result<()> {
+    pub async fn reset(&mut self) -> Result<()> {
         self.mock_registers = [1; 112];
 
         // wait for 10 ms before using the chip
-        Self::sleep(10);
+        Self::sleep(10).await;
 
         Ok(())
     }
 
     #[cfg(target_arch = "x86_64")]
-    pub fn config_dio(&mut self) -> Result<()> {
+    pub async fn config_dio(&mut self) -> Result<()> {
         Ok(())
     }
 
     #[cfg(target_arch = "arm")]
-    pub fn from_config(lora_config: &LoRaConfig) -> Result<LoRa> {
+    pub async fn from_config(lora_config: &LoRaConfig) -> Result<LoRa> {
         let local_spi_config = lora_config.spi_config.clone();
         let mut spidev = Spidev::open(local_spi_config.spidev_path.clone())?;
 
@@ -205,47 +206,47 @@ impl LoRa {
         Ok(())
     }
 
-    pub fn standby_mode(&mut self) -> Result<()> {
+    pub async fn standby_mode(&mut self) -> Result<()> {
         self.spi_write_register(
             LoRaRegister::OP_MODE,
             LoRaMode::LONG_RANGE as u8 | LoRaMode::STDBY as u8,
         )
         .context("LoRa::standby_mode")?;
-        Self::sleep(10);
+        Self::sleep(10).await;
         Ok(())
     }
 
-    pub fn sleep_mode(&mut self) -> Result<()> {
+    pub async fn sleep_mode(&mut self) -> Result<()> {
         self.spi_write_register(
             LoRaRegister::OP_MODE,
             LoRaMode::LONG_RANGE as u8 | LoRaMode::SLEEP as u8,
         )
         .context("LoRa::sleep_mode")?;
-        Self::sleep(10);
+        Self::sleep(10).await;
         Ok(())
     }
 
-    pub fn receive_mode(&mut self) -> Result<()> {
+    pub async fn receive_mode(&mut self) -> Result<()> {
         self.spi_write_register(
             LoRaRegister::OP_MODE,
             LoRaMode::LONG_RANGE as u8 | LoRaMode::RX_CONTINUOUS as u8,
         )
         .context("LoRa::recieve_mode")?;
-        Self::sleep(10);
+        Self::sleep(10).await;
         Ok(())
     }
 
-    pub fn transmit_mode(&mut self) -> Result<()> {
+    pub async fn transmit_mode(&mut self) -> Result<()> {
         self.spi_write_register(
             LoRaRegister::OP_MODE,
             LoRaMode::LONG_RANGE as u8 | LoRaMode::TX as u8,
         )
         .context("LoRa::transmit_mode")?;
-        Self::sleep(10);
+        Self::sleep(10).await;
         Ok(())
     }
 
-    pub fn set_tx_power(&mut self, level: u8) -> Result<()> {
+    pub async fn set_tx_power(&mut self, level: u8) -> Result<()> {
         let correct_level = match level {
             0 | 1 => 2,
             2..=17 => level,
@@ -256,11 +257,11 @@ impl LoRa {
             PAConfiguration::PA_BOOST as u8 | correct_level,
         )
         .context("LoRa::set_tx_power")?;
-        Self::sleep(10);
+        Self::sleep(10).await;
         Ok(())
     }
 
-    pub fn set_frequency(&mut self, frequency: u64) -> Result<()> {
+    pub async fn set_frequency(&mut self, frequency: u64) -> Result<()> {
         let frf = (frequency << 19) / 32_000_000;
         self.spi_write_register(LoRaRegister::FRF_MSB, (frf >> 16) as u8)
             .context("LoRa::set_frequency ")?;
@@ -268,12 +269,12 @@ impl LoRa {
             .context("LoRa::set_frequency ")?;
         self.spi_write_register(LoRaRegister::FRF_LSB, frf as u8)
             .context("LoRa::set_frequency ")?;
-        Self::sleep(10);
+        Self::sleep(10).await;
 
         Ok(())
     }
 
-    pub fn set_bandwidth(&mut self, bandwidth: Bandwidth) -> Result<()> {
+    pub async fn set_bandwidth(&mut self, bandwidth: Bandwidth) -> Result<()> {
         let mut value = 0x00;
         let register = LoRaRegister::MODEM_CONFIG_1;
         self.spi_read_register(register, &mut value)
@@ -282,12 +283,12 @@ impl LoRa {
         let mask = 0x0f;
         self.spi_write_register(register, (value & mask) | ((bandwidth as u8) << 4))
             .context("LoRa::set_bandwidth")?;
-        Self::sleep(10);
+        Self::sleep(10).await;
 
         Ok(())
     }
 
-    pub fn set_coding_rate(&mut self, coding_rate: CodingRate) -> Result<()> {
+    pub async fn set_coding_rate(&mut self, coding_rate: CodingRate) -> Result<()> {
         let mut value = 0x00;
         let register = LoRaRegister::MODEM_CONFIG_1;
         self.spi_read_register(register, &mut value)
@@ -297,12 +298,12 @@ impl LoRa {
         let cr = coding_rate as u8 - 4;
         self.spi_write_register(register, (value & mask) | (cr << 1))
             .context("LoRa::set_coding_rate")?;
-        Self::sleep(10);
+        Self::sleep(10).await;
 
         Ok(())
     }
 
-    pub fn set_spreading_factor(&mut self, spreading_factor: SpreadingFactor) -> Result<()> {
+    pub async fn set_spreading_factor(&mut self, spreading_factor: SpreadingFactor) -> Result<()> {
         let mut value = 0x00;
         let register = LoRaRegister::MODEM_CONFIG_2;
         self.spi_read_register(register, &mut value)
@@ -315,12 +316,12 @@ impl LoRa {
             (value & reg_mask) | (((spreading_factor as u8) << 4) & val_mask),
         )
         .context("LoRa::set_spreading_factor")?;
-        Self::sleep(10);
+        Self::sleep(10).await;
 
         Ok(())
     }
 
-    pub fn enable_crc(&mut self) -> Result<()> {
+    pub async fn enable_crc(&mut self) -> Result<()> {
         let mut value = 0x00;
         let crc_on = 0x04;
         let register = LoRaRegister::MODEM_CONFIG_2;
@@ -329,11 +330,11 @@ impl LoRa {
 
         self.spi_write_register(register, value | crc_on)
             .context("LoRa::enable_crc")?;
-        Self::sleep(10);
+        Self::sleep(10).await;
 
         Ok(())
     }
-    pub fn get_bandwidth(&mut self) -> Result<u8> {
+    pub async fn get_bandwidth(&mut self) -> Result<u8> {
         let mut value = 0x00;
         self.spi_read_register(LoRaRegister::MODEM_CONFIG_1, &mut value)
             .context("LoRa::get_bandwidth")?;
@@ -341,7 +342,7 @@ impl LoRa {
         Ok((value & 0xf0) >> 4)
     }
 
-    pub fn get_coding_rate(&mut self) -> Result<u8> {
+    pub async fn get_coding_rate(&mut self) -> Result<u8> {
         let mut value = 0x00;
         self.spi_read_register(LoRaRegister::MODEM_CONFIG_1, &mut value)
             .context("LoRa::get_coding_rate")?;
@@ -349,7 +350,7 @@ impl LoRa {
         Ok(((value & 0x0e) >> 1) + 4)
     }
 
-    pub fn get_spreading_factor(&mut self) -> Result<u8> {
+    pub async fn get_spreading_factor(&mut self) -> Result<u8> {
         let mut value = 0x00;
         self.spi_read_register(LoRaRegister::MODEM_CONFIG_1, &mut value)
             .context("LoRa::get_spreading_factor")?;
@@ -357,7 +358,7 @@ impl LoRa {
         Ok((value >> 4) + 8)
     }
 
-    pub fn get_frequency(&mut self) -> Result<[u8; 3]> {
+    pub async fn get_frequency(&mut self) -> Result<[u8; 3]> {
         let mut values: [u8; 3] = [0, 0, 0];
         self.spi_read_register(LoRaRegister::FRF_MSB, &mut values[0])
             .context("LoRa::get_frequency")?;
@@ -369,16 +370,16 @@ impl LoRa {
         Ok(values)
     }
 
-    pub fn config_radio(&mut self, radio_config: RadioConfig) -> Result<()> {
-        self.set_frequency(433_000_000).context("LoRa::config_radio")?;
-        self.set_bandwidth(radio_config.bandwidth)
+    pub async fn config_radio(&mut self, radio_config: RadioConfig) -> Result<()> {
+        self.set_frequency(433_000_000).await.context("LoRa::config_radio")?;
+        self.set_bandwidth(radio_config.bandwidth).await
             .context("LoRa::config_radio")?;
-        self.set_coding_rate(radio_config.coding_rate)
+        self.set_coding_rate(radio_config.coding_rate).await
             .context("LoRa::config_radio")?;
-        self.set_spreading_factor(radio_config.spreading_factor)
+        self.set_spreading_factor(radio_config.spreading_factor).await
             .context("LoRa::config_radio")?;
-        self.enable_crc().context("LoRa::config_radio")?;
-        self.set_tx_power(radio_config.tx_power)
+        self.enable_crc().await.context("LoRa::config_radio")?;
+        self.set_tx_power(radio_config.tx_power).await
             .context("LoRa::config_radio")?;
 
         Ok(())
@@ -396,10 +397,10 @@ impl LoRa {
         Ok(())
     }
 
-    pub fn receive_packet(&mut self, crc_error: &mut bool) -> Result<Vec<u8>> {
+    pub async fn receive_packet(&mut self, crc_error: &mut bool) -> Result<Vec<u8>> {
         let mut return_length = 0;
 
-        self.receive_mode().context("LoRa::receive_packet")?;
+        self.receive_mode().await.context("LoRa::receive_packet")?;
 
         loop {
             let dio0_event = self.dio0_pin.read_event().context("LoRa::receive_packet")?;
@@ -416,7 +417,7 @@ impl LoRa {
             }
         }
 
-        self.standby_mode().context("LoRa::receive_packet")?;
+        self.standby_mode().await.context("LoRa::receive_packet")?;
 
         self.spi_read_register(LoRaRegister::RX_NB_BYTES, &mut return_length)
             .context("LoRa::receive_packet")?;
@@ -433,7 +434,7 @@ impl LoRa {
         Ok(buffer)
     }
 
-    pub fn send_packet(&mut self, buffer: Vec<u8>) -> Result<()> {
+    pub async fn send_packet(&mut self, buffer: Vec<u8>) -> Result<()> {
         let mut tx_address = 0x00;
         self.spi_read_register(LoRaRegister::FIFO_TX_BASE_ADDR, &mut tx_address)
             .context("LoRa::send_packet")?;
@@ -444,7 +445,7 @@ impl LoRa {
             .context("LoRa::send_packet")?;
         self.write_fifo(buffer).context("LoRa::send_packet")?;
 
-        self.transmit_mode().context("LoRa::send_packet")?;
+        self.transmit_mode().await.context("LoRa::send_packet")?;
 
         loop {
             let dio0_event = self.dio0_pin.read_event().context("LoRa::send_packet")?;
@@ -455,32 +456,33 @@ impl LoRa {
             }
         }
 
-        self.sleep_mode().context("LoRa::send_packet")?;
+        self.sleep_mode().await.context("LoRa::send_packet")?;
 
         Ok(())
     }
 
-    pub fn start(&mut self, radio_config: RadioConfig) -> Result<()> {
-        self.reset().context("LoRa::start")?;
-        self.sleep_mode().context("LoRa::start")?;
-        self.config_radio(radio_config).context("LoRa::start")?;
-        self.config_dio().context("LoRa::start")?;
+    pub async fn start(&mut self, radio_config: RadioConfig, queue: BlockingQueue<Packet>) -> Result<Error> {
+        self.reset().await.context("LoRa::start")?;
+        self.sleep_mode().await.context("LoRa::start")?;
+        self.config_radio(radio_config).await.context("LoRa::start")?;
+        self.config_dio().await.context("LoRa::start")?;
         self.spi_write_register(LoRaRegister::MODEM_CONFIG_3, 0x04u8)
             .context("LoRa::start")?;
         print_rusty_beagle();
         print_version_tag();
         println!("+-------------------------+");
-        println!("| Bandwidth: {}            |", self.get_bandwidth().context("LoRa::start")?);
-        println!("| Coding rate: {}          |", self.get_coding_rate().context("LoRa::start")?);
-        println!("| Spreading factor: {:02}    |", self.get_spreading_factor().context("LoRa::start")?);
+        println!("| Bandwidth: {}            |", self.get_bandwidth().await.context("LoRa::start")?);
+        println!("| Coding rate: {}          |", self.get_coding_rate().await.context("LoRa::start")?);
+        println!("| Spreading factor: {:02}    |", self.get_spreading_factor().await.context("LoRa::start")?);
         println!("| Mode: {:?}                |", self.mode);
         println!("+-------------------------+");
-        for _ in 0..10000 {
+        loop {
             match self.mode {
                 Mode::RX => {
+                    let inside_queue = queue.clone();
                     let mut crc_error = false;
 
-                    let received_buffer = match self.receive_packet(&mut crc_error) {
+                    let received_buffer = match self.receive_packet(&mut crc_error).await {
                         Ok(s) => s,
                         Err(e) => {
                             eprintln!("{:?}", e);
@@ -499,22 +501,24 @@ impl LoRa {
                         println!();
                     }
 
-                    let packet = match Packet::new(&received_buffer) {
+                    match Packet::new(&received_buffer) {
                         Ok(packet) => {
                             println!("Received: {:#?}", packet);
-                            if !crc_error { info!("Received: {:?}", packet);}
-                            packet
+                            if !crc_error {
+                                info!("Received: {:?}", packet);
+                                inside_queue.put(packet).await;
+                            }
                         },
                         Err(e) => {
                             println!("Bad package: {:?}", e);
                             println!();
                             println!("Received: {:02X?}", received_buffer);
-                            self.sleep_mode().context("LoRa::start")?;
+                            self.sleep_mode().await.context("LoRa::start")?;
                             continue;
                         }
                     };
 
-                    self.sleep_mode().context("LoRa::start")?;
+                    self.sleep_mode().await.context("LoRa::start")?;
                 }
                 Mode::TX => {
                     let mut lna = 0x00;
@@ -523,7 +527,7 @@ impl LoRa {
                     self.spi_write_register(LoRaRegister::LNA, lna | 0x03)
                         .context("LoRa::start")?;
 
-                    self.standby_mode().context("LoRa::start")?;
+                    self.standby_mode().await.context("LoRa::start")?;
 
                     let packet = Packet {
                         version: 0x33,
@@ -537,38 +541,35 @@ impl LoRa {
                             pressure: 56
                         }),
                     };
-                    self.send_packet(packet.to_bytes()?).context("LoRa::start")?;
-                    self.sleep_mode()?;
-                    Self::sleep(2000);
+                    self.send_packet(packet.to_bytes()?).await.context("LoRa::start")?;
+                    self.sleep_mode().await?;
+                    Self::sleep(2000).await;
                 }
             }
         }
-
-        self.reset().context("LoRa::start")?;
-        Ok(())
     }
 
     #[cfg(target_arch = "arm")]
-    pub fn reset(&mut self) -> Result<()> {
+    pub async fn reset(&mut self) -> Result<()> {
         // pull NRST pin low for 5 ms
         self.reset_pin
             .set_values(0x00_u8)
             .context("LoRa::LoRa reset: while setting reset_pin low")?;
 
-        Self::sleep(5);
+        Self::sleep(5).await;
 
         self.reset_pin
             .set_values(0x01_u8)
             .context("LoRa::LoRa reset: while setting reset_pin high")?;
 
         // wait 10 ms before using the chip
-        Self::sleep(10);
+        Self::sleep(10).await;
 
         Ok(())
     }
 
     #[cfg(target_arch = "arm")]
-    pub fn config_dio(&mut self) -> Result<()> {
+    pub async fn config_dio(&mut self) -> Result<()> {
         let mut initial_value = 0x00;
         self.spi_read_register(LoRaRegister::DIO_MAPPING_1, &mut initial_value).context("LoRa::config_dio")?;
         match self.mode {
