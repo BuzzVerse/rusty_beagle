@@ -143,3 +143,18 @@ impl SpiFlags {
     pub const SPI_MODE_2: SpiFlags = SpiFlags::SPI_CPOL;
     pub const SPI_MODE_3: SpiFlags = SpiFlags::SPI_MODE_0;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn config_correct() {
+        assert!(Config::from_file("./tests/configs/conf.ron".to_string()).is_ok());
+    }
+
+    #[test]
+    fn incomplete_config() {
+        assert!(Config::from_file("./tests/configs/incomplete_conf.ron".to_string()).is_err());
+    }
+}
