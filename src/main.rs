@@ -47,7 +47,7 @@ fn main() {
     start_logger();
 
     let config_path = parse_args();
-    let config = Config::from_file(config_path);
+    let config = handle_error!(Config::from_file(config_path));
     let radio_config = config.lora_config.radio_config.clone();
 
     let mut lora = match LoRa::from_config(&config.lora_config) {

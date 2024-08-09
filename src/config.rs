@@ -1,7 +1,8 @@
 use crate::defines::{Bandwidth, CodingRate, SpreadingFactor};
-use log::{error, info};
+use anyhow::{Context, Result};
+use log::info;
 use serde::{Deserialize, Serialize};
-use std::{fs, process};
+use std::fs;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
@@ -10,27 +11,11 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn from_file(config_path: String) -> Config {
-        let config_file = match fs::read_to_string(config_path) {
-            Ok(s) => s,
-            Err(e) => {
-                eprintln!("ERROR {:?}", e.to_string());
-                error!("While reading config file: {e}.");
-                process::exit(-1)
-            }
-        };
-
-        match ron::from_str(config_file.as_str()) {
-            Ok(config) => {
-                info!("Succesfully read config file.");
-                config
-            }
-            Err(e) => {
-                eprintln!("ERROR {:?}", e.to_string());
-                error!("While deserializing ron file to config: {e}.");
-                process::exit(-1);
-            }
-        }
+    pub fn from_file(config_path: String) -> Result<Config> {
+        let config_file = fs::read_to_string(config_path).context("Config::from_file")?; 
+        let config = ron::from_str(config_file.as_str()).context("Config::from_file")?;
+        info!("Succesfully read config file.");
+        Ok(config)
     }
 }
 
