@@ -1,6 +1,11 @@
-use std::collections::VecDeque;
+use std::{collections::VecDeque, time::Duration};
 use std::sync::Arc;
+use anyhow::{Context, Result};
+use log::{error, info};
 use tokio::sync::{Mutex, Notify};
+use rumqttc::{AsyncClient, EventLoop, MqttOptions, QoS};
+use tokio::time::sleep;
+use crate::config::MQTTConfig;
 
 pub struct BlockingQueue<T> {
     queue: Arc<Mutex<VecDeque<T>>>,
@@ -54,5 +59,46 @@ impl<T> Clone for BlockingQueue<T> {
             notify: Arc::clone(&self.notify),
             capacity: self.capacity,
         }
+    }
+}
+
+pub struct Mqtt {
+    client: AsyncClient,
+    eventloop_handle: tokio::task::JoinHandle<()>,
+    topic: String,
+}
+
+impl Mqtt {
+    pub async fn new(mqtt_config: MQTTConfig) -> Result<Self> {
+        let mut options = MqttOptions::new("RustyBeagle", mqtt_config.ip, mqtt_config.port.parse().context("Mqtt::new")?);
+        options.set_credentials(mqtt_config.login, mqtt_config.password);
+        options.set_keep_alive(Duration::from_secs(5));
+
+        let topic = mqtt_config.topic;
+
+        let (client, mut event_loop) = AsyncClient::new(options, 10);
+        let eventloop_handle = tokio::spawn(async move {
+            loop {
+                match event_loop.poll().await {
+                    Ok(m) => info!("MQTT: {:?}", m),
+                    Err(e) => {
+                        eprintln!("{:?}", e);
+                        error!("MQTT: {:?}", e);
+                    }
+
+                }
+            }
+        });
+        Ok(Self {client, eventloop_handle, topic})
+    }
+
+    pub async fn publish(&self, msg: &str) -> Result<()> {
+        self.client.publish(self.topic.clone(), QoS::AtLeastOnce, false, msg).await?;
+        Ok(())
+    }
+
+    pub async fn shutdown(&self) {
+        self.eventloop_handle.abort();
+        sleep(Duration::from_secs(1)).await;
     }
 }

@@ -15,6 +15,10 @@ pub use crate::logging::start_logger;
 use log::{error, info};
 use lora::LoRa;
 use mqtt::BlockingQueue;
+use mqtt::Mqtt;
+use packet::Data;
+use packet::Packet;
+use std::sync::Arc;
 
 macro_rules! handle_error {
     ($func:expr) => {
@@ -35,6 +39,7 @@ async fn main() {
 
     let config = Config::from_file();
     let radio_config = config.lora_config.radio_config.clone();
+    let mqtt_config = config.mqtt_config.clone();
 
     let mut lora = match LoRa::from_config(&config.lora_config).await {
         Ok(lora) => {
@@ -51,9 +56,20 @@ async fn main() {
     let lora_queue = queue.clone();
     let mqtt_queue = queue.clone();
 
+    let mqtt = Arc::new(handle_error!(Mqtt::new(mqtt_config).await));
+    let mqtt_clone = Arc::clone(&mqtt);
     tokio::spawn(async move {
         loop {
-            println!("Async took: {:?}", mqtt_queue.take().await);
+            let time_stamp = handle_error!(std::time::SystemTime::now().duration_since(std::time::SystemTime::UNIX_EPOCH));
+            let packet: Packet = mqtt_queue.take().await;
+            let msg = match packet.data {
+                Data::Bme280(data) => {
+                    format!("{{\"time\": {}, \"humidity\": {}, \"temperature\": {}, \"battery_voltage_mv\": 3000}}", time_stamp.as_secs(), data.humidity, data.temperature)
+                },
+                _ => "".to_string(),
+            };
+            handle_error!(mqtt_clone.publish(&msg).await);
+            println!("Sent: {}", msg);
         }
     });
     let handle = tokio::spawn(async move {
@@ -62,4 +78,6 @@ async fn main() {
     if let Err(e) = handle.await {
         eprintln!("Task failed: {:?}", e);
     }
+
+    mqtt.shutdown().await;
 }
