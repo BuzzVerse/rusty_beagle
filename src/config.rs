@@ -1,8 +1,8 @@
 use crate::defines::{Bandwidth, CodingRate, SpreadingFactor};
-use log::{error, info};
+use anyhow::{Context, Result};
+use log::info;
 use serde::{Deserialize, Serialize};
-use std::env;
-use std::{fs, process};
+use std::fs;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
@@ -12,42 +12,11 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn from_file() -> Config {
-        let config_file = match fs::read_to_string(Config::parse_args()) {
-            Ok(s) => s,
-            Err(e) => {
-                eprintln!("ERROR {:?}", e.to_string());
-                error!("While reading config file: {e}.");
-                process::exit(-1)
-            }
-        };
-
-        match ron::from_str(config_file.as_str()) {
-            Ok(config) => {
-                info!("Succesfully read config file.");
-                config
-            }
-            Err(e) => {
-                eprintln!("ERROR {:?}", e.to_string());
-                error!("While deserializing ron file to config: {e}.");
-                process::exit(-1);
-            }
-        }
-    }
-
-    fn parse_args() -> String {
-        let args: Vec<String> = env::args().collect();
-
-        match args.len() {
-            1 => "./conf.ron".to_string(),
-            2 => args[1].to_string(),
-            _ => {
-                eprintln!("Wrong number of arguments!");
-                println!("Usage: ./rusty_beagle [config file]");
-                error!("Wrong number of arguments.");
-                std::process::exit(-1);
-            }
-        }
+    pub fn from_file(config_path: String) -> Result<Config> {
+        let config_file = fs::read_to_string(config_path).context("Config::from_file")?;
+        let config = ron::from_str(config_file.as_str()).context("Config::from_file")?;
+        info!("Succesfully read config file.");
+        Ok(config)
     }
 }
 
@@ -88,6 +57,7 @@ pub struct LoRaConfig {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct RadioConfig {
+    pub frequency: u64,
     pub bandwidth: Bandwidth,
     pub coding_rate: CodingRate,
     pub spreading_factor: SpreadingFactor,
@@ -182,4 +152,19 @@ impl SpiFlags {
     pub const SPI_MODE_1: SpiFlags = SpiFlags::SPI_CPHA;
     pub const SPI_MODE_2: SpiFlags = SpiFlags::SPI_CPOL;
     pub const SPI_MODE_3: SpiFlags = SpiFlags::SPI_MODE_0;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn config_correct() {
+        assert!(Config::from_file("./tests/configs/conf.ron".to_string()).is_ok());
+    }
+
+    #[test]
+    fn config_incomplete() {
+        assert!(Config::from_file("./tests/configs/incomplete_conf.ron".to_string()).is_err());
+    }
 }

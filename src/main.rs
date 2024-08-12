@@ -16,6 +16,7 @@ pub use crate::logging::start_logger;
 use bme280::BME280Sensor;
 use log::{error, info};
 use lora::LoRa;
+use std::env;
 use std::thread;
 use std::time::Duration;
 
@@ -32,10 +33,26 @@ macro_rules! handle_error {
     };
 }
 
+fn parse_args() -> String {
+    let args: Vec<String> = env::args().collect();
+
+    match args.len() {
+        1 => "./conf.ron".to_string(),
+        2 => args[1].to_string(),
+        _ => {
+            eprintln!("Wrong number of arguments!");
+            println!("Usage: ./rusty_beagle [config file]");
+            error!("Wrong number of arguments.");
+            std::process::exit(-1);
+        }
+    }
+}
+
 fn main() {
     start_logger();
 
-    let config = Config::from_file();
+    let config_path = parse_args();
+    let config = handle_error!(Config::from_file(config_path));
     let radio_config = config.lora_config.radio_config.clone();
     let bme_config: BME280Config = config.bme_config.clone();
 
