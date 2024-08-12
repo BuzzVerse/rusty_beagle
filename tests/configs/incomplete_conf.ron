@@ -24,4 +24,10 @@ Config(
             spreading_factor: spreading_factor_4096,
         ),
     ),
+    bme_config: BME280Config(
+        i2c_bus_path: "/dev/i2c-2",
+        i2c_address: 118,
+        measurement_interval: 10,
+        enabled: true,
+    ),
 )
