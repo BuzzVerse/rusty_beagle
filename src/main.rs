@@ -16,17 +16,30 @@ use log::{error, info};
 use lora::LoRa;
 use mqtt::BlockingQueue;
 use mqtt::Mqtt;
-use packet::Data;
+use packet::DataType;
 use packet::Packet;
 use std::sync::Arc;
 
-macro_rules! handle_error {
+macro_rules! handle_error_exit {
     ($func:expr) => {
         match $func {
             Err(e) => {
                 eprintln!("{:?}", e);
                 error!("{:?}", e);
                 std::process::exit(-1);
+            }
+            Ok(s) => s,
+        }
+    };
+}
+
+macro_rules! handle_error_contiue {
+    ($func:expr) => {
+        match $func {
+            Err(e) => {
+                eprintln!("{:?}", e);
+                error!("{:?}", e);
+                continue;
             }
             Ok(s) => s,
         }
@@ -56,28 +69,26 @@ async fn main() {
     let lora_queue = queue.clone();
     let mqtt_queue = queue.clone();
 
-    let mqtt = Arc::new(handle_error!(Mqtt::new(mqtt_config).await));
+    let mqtt = Arc::new(handle_error_exit!(Mqtt::new(mqtt_config.clone()).await));
     let mqtt_clone = Arc::clone(&mqtt);
-    tokio::spawn(async move {
+    let mqtt_handle  = tokio::spawn(async move {
+        let mqtt_config = mqtt_config;
         loop {
-            let time_stamp = handle_error!(std::time::SystemTime::now().duration_since(std::time::SystemTime::UNIX_EPOCH));
             let packet: Packet = mqtt_queue.take().await;
-            let msg = match packet.data {
-                Data::Bme280(data) => {
-                    format!("{{\"time\": {}, \"humidity\": {}, \"temperature\": {}, \"battery_voltage_mv\": 3000}}", time_stamp.as_secs(), data.humidity, data.temperature)
+            let msg = handle_error_contiue!(packet.to_json());
+            match packet.data_type {
+                DataType::BME280 => {
+                    handle_error_contiue!(mqtt_clone.publish(&mqtt_config.topic, &msg).await)
                 },
-                _ => "".to_string(),
-            };
-            handle_error!(mqtt_clone.publish(&msg).await);
-            println!("Sent: {}", msg);
+                _ => continue,
+            }
         }
     });
-    let handle = tokio::spawn(async move {
-        handle_error!(lora.start(radio_config, lora_queue).await);
+    let lora_handle = tokio::spawn(async move {
+        handle_error_exit!(lora.start(radio_config, lora_queue).await);
     });
-    if let Err(e) = handle.await {
-        eprintln!("Task failed: {:?}", e);
-    }
+    handle_error_exit!(lora_handle.await);
+    handle_error_exit!(mqtt_handle.await);
 
     mqtt.shutdown().await;
 }

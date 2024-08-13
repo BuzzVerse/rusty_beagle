@@ -65,7 +65,6 @@ impl<T> Clone for BlockingQueue<T> {
 pub struct Mqtt {
     client: AsyncClient,
     eventloop_handle: tokio::task::JoinHandle<()>,
-    topic: String,
 }
 
 impl Mqtt {
@@ -73,8 +72,6 @@ impl Mqtt {
         let mut options = MqttOptions::new("RustyBeagle", mqtt_config.ip, mqtt_config.port.parse().context("Mqtt::new")?);
         options.set_credentials(mqtt_config.login, mqtt_config.password);
         options.set_keep_alive(Duration::from_secs(5));
-
-        let topic = mqtt_config.topic;
 
         let (client, mut event_loop) = AsyncClient::new(options, 10);
         let eventloop_handle = tokio::spawn(async move {
@@ -89,11 +86,11 @@ impl Mqtt {
                 }
             }
         });
-        Ok(Self {client, eventloop_handle, topic})
+        Ok(Self {client, eventloop_handle})
     }
 
-    pub async fn publish(&self, msg: &str) -> Result<()> {
-        self.client.publish(self.topic.clone(), QoS::AtLeastOnce, false, msg).await?;
+    pub async fn publish(&self, topic: &str, msg: &str) -> Result<()> {
+        self.client.publish(topic, QoS::AtLeastOnce, false, msg).await?;
         Ok(())
     }
 
