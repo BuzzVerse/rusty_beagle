@@ -27,6 +27,7 @@ pub struct MQTTConfig {
     pub login: String,
     pub password: String,
     pub topic: String,
+    pub enabled: bool,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

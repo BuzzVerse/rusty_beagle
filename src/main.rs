@@ -104,30 +104,36 @@ async fn main() {
             std::process::exit(-1);
         }
     };
-    let queue = BlockingQueue::new(128);
-    let lora_queue = queue.clone();
-    let mqtt_queue = queue.clone();
 
-    let mqtt = Arc::new(handle_error_exit!(Mqtt::new(mqtt_config.clone()).await));
-    let mqtt_clone = Arc::clone(&mqtt);
-    let mqtt_handle  = tokio::spawn(async move {
-        let mqtt_config = mqtt_config;
-        loop {
-            let packet: Packet = mqtt_queue.take().await;
-            let msg = handle_error_contiue!(packet.to_json());
-            match packet.data_type {
-                DataType::BME280 => {
-                    handle_error_contiue!(mqtt_clone.publish(&mqtt_config.topic, &msg).await)
-                },
-                _ => continue,
+    let lora_queue;
+
+    if mqtt_config.enabled {
+        let queue = BlockingQueue::new(128);
+        lora_queue = Some(queue.clone());
+        let mqtt_queue = queue.clone();
+
+        let mqtt = Arc::new(handle_error_exit!(Mqtt::new(mqtt_config.clone()).await));
+        let mqtt_clone = Arc::clone(&mqtt);
+        tokio::spawn(async move {
+            let mqtt_config = mqtt_config;
+            loop {
+                let packet: Packet = mqtt_queue.take().await;
+                let msg = handle_error_contiue!(packet.to_json());
+                match packet.data_type {
+                    DataType::BME280 => {
+                        handle_error_contiue!(mqtt_clone.publish(&mqtt_config.topic, &msg).await)
+                    },
+                    _ => continue,
+                }
             }
-        }
-    });
+        });
+    } else {
+        lora_queue = None;
+    }
+
     let lora_handle = tokio::spawn(async move {
         handle_error_exit!(lora.start(radio_config, lora_queue).await);
     });
-    handle_error_exit!(lora_handle.await);
-    handle_error_exit!(mqtt_handle.await);
 
-    mqtt.shutdown().await;
+    handle_error_exit!(lora_handle.await);
 }

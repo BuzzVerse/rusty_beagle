@@ -468,7 +468,7 @@ impl LoRa {
         Ok(())
     }
 
-    pub async fn start(&mut self, radio_config: RadioConfig, queue: BlockingQueue<Packet>) -> Result<Error> {
+    pub async fn start(&mut self, radio_config: RadioConfig, queue: Option<BlockingQueue<Packet>>) -> Result<Error> {
         self.reset().await.context("LoRa::start")?;
         self.sleep_mode().await.context("LoRa::start")?;
         self.config_radio(radio_config).await.context("LoRa::start")?;
@@ -486,7 +486,6 @@ impl LoRa {
         loop {
             match self.mode {
                 Mode::RX => {
-                    let inside_queue = queue.clone();
                     let mut crc_error = false;
 
                     let received_buffer = match self.receive_packet(&mut crc_error).await {
@@ -513,7 +512,9 @@ impl LoRa {
                             println!("Received: {:#?}", packet);
                             if !crc_error {
                                 info!("Received: {:?}", packet);
-                                inside_queue.put(packet).await;
+                                if let Some(queue) = &queue {
+                                    queue.put(packet).await;
+                                };
                             }
                         },
                         Err(e) => {

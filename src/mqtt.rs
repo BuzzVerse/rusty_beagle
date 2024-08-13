@@ -3,8 +3,7 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use log::{error, info};
 use tokio::sync::{Mutex, Notify};
-use rumqttc::{AsyncClient, EventLoop, MqttOptions, QoS};
-use tokio::time::sleep;
+use rumqttc::{AsyncClient, MqttOptions, QoS};
 use crate::config::MQTTConfig;
 
 pub struct BlockingQueue<T> {
@@ -64,7 +63,6 @@ impl<T> Clone for BlockingQueue<T> {
 
 pub struct Mqtt {
     client: AsyncClient,
-    eventloop_handle: tokio::task::JoinHandle<()>,
 }
 
 impl Mqtt {
@@ -74,7 +72,7 @@ impl Mqtt {
         options.set_keep_alive(Duration::from_secs(5));
 
         let (client, mut event_loop) = AsyncClient::new(options, 10);
-        let eventloop_handle = tokio::spawn(async move {
+        tokio::spawn(async move {
             loop {
                 match event_loop.poll().await {
                     Ok(m) => info!("MQTT: {:?}", m),
@@ -86,16 +84,11 @@ impl Mqtt {
                 }
             }
         });
-        Ok(Self {client, eventloop_handle})
+        Ok(Self {client})
     }
 
     pub async fn publish(&self, topic: &str, msg: &str) -> Result<()> {
         self.client.publish(topic, QoS::AtLeastOnce, false, msg).await?;
         Ok(())
-    }
-
-    pub async fn shutdown(&self) {
-        self.eventloop_handle.abort();
-        sleep(Duration::from_secs(1)).await;
     }
 }
