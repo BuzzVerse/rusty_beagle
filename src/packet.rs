@@ -2,7 +2,7 @@ use core::fmt;
 
 use serde::{Deserialize, Serialize};
 use anyhow::{anyhow, Context, Result};
-use std::hash::{DefaultHasher, Hash, Hasher};
+use std::{fmt::format, hash::{DefaultHasher, Hash, Hasher}, time::SystemTime};
 use crate::conversions::*;
 
 pub const DATA_SIZE: usize = 59;
@@ -236,6 +236,17 @@ impl Packet {
 
         packet.append(&mut data);
         Ok(packet)
+    }
+
+    pub fn to_json(&self) -> Result<String> {
+        let time_stamp = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?;
+        match &self.data {
+            Data::Bme280(data) => Ok(format!(r#"{{ "time": {:?}, "temperature": {}, "humidity": {}, "pressure": {} }}"#, time_stamp, data.temperature, data.humidity, data.pressure)),
+            Data::Bma400(data) => Ok(format!(r#"{{ "time": {:?}, "x": {}, "y": {}, "z": {} }}"#, time_stamp, data.x, data.y, data.z)),
+            Data::Mq2(data) => Ok(format!(r#"{{ "time": {:?}, "gas_type": {}, "value": {} }}"#, time_stamp, data.gas_type, data.value)),
+            Data::Gps(data) => Ok(format!(r#"{{ "time": {:?}, "status": {}, "altitude": {}, "latitude": {}, "longitude": {} }}"#, time_stamp, data.status, data.altitude, data.latitude, data.longitude)),
+            Data::Sms(data) => Ok(format!(r#"{{ "time": {:?}, "text": "{}" }}"#, time_stamp, *data)),
+        }
     }
 }
 
