@@ -119,12 +119,15 @@ async fn main() {
             loop {
                 let packet: Packet = mqtt_queue.take().await;
                 let msg = handle_error_continue!(packet.to_json());
-                match packet.data_type {
-                    DataType::BME280 => {
-                        handle_error_continue!(mqtt_clone.publish(&mqtt_config.topic, &msg).await)
-                    },
-                    _ => continue,
-                }
+                let topic = match packet.data_type {
+                    DataType::BME280 => &mqtt_config.topics.bme,
+                    DataType::BMA400 => &mqtt_config.topics.bma,
+                    DataType::MQ2 => &mqtt_config.topics.mq2,
+                    DataType::Gps => &mqtt_config.topics.gps,
+                    DataType::Sms => &mqtt_config.topics.sms,
+                };
+                handle_error_continue!(mqtt_clone.publish(topic, &msg).await)
+
             }
         });
     } else {
