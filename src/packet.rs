@@ -1,9 +1,8 @@
 use core::fmt;
-
 use crate::conversions::*;
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
-use std::hash::Hash;
+use std::{fmt::format, hash::{DefaultHasher, Hash, Hasher}, time::SystemTime};
 
 pub const DATA_SIZE: usize = 59;
 pub const META_DATA_SIZE: usize = 5;
@@ -45,60 +44,6 @@ pub enum Data {
     Mq2(MQ2),
     Gps(Gps),
     Sms(String),
-}
-
-trait GetData<T> {
-    fn get_data(&self) -> Option<&T>;
-}
-
-impl GetData<BME280> for Data {
-    fn get_data(&self) -> Option<&BME280> {
-        if let Data::Bme280(ref inner) = *self {
-            Some(inner)
-        } else {
-            None
-        }
-    }
-}
-
-impl GetData<BMA400> for Data {
-    fn get_data(&self) -> Option<&BMA400> {
-        if let Data::Bma400(ref inner) = *self {
-            Some(inner)
-        } else {
-            None
-        }
-    }
-}
-
-impl GetData<MQ2> for Data {
-    fn get_data(&self) -> Option<&MQ2> {
-        if let Data::Mq2(ref inner) = *self {
-            Some(inner)
-        } else {
-            None
-        }
-    }
-}
-
-impl GetData<Gps> for Data {
-    fn get_data(&self) -> Option<&Gps> {
-        if let Data::Gps(ref inner) = *self {
-            Some(inner)
-        } else {
-            None
-        }
-    }
-}
-
-impl GetData<String> for Data {
-    fn get_data(&self) -> Option<&String> {
-        if let Data::Sms(ref inner) = *self {
-            Some(inner)
-        } else {
-            None
-        }
-    }
 }
 
 #[derive(Debug, Deserialize, Serialize, Hash)]
@@ -279,6 +224,17 @@ impl Packet {
 
         packet.append(&mut data);
         Ok(packet)
+    }
+
+    pub fn to_json(&self) -> Result<String> {
+        let time_stamp = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?;
+        match &self.data {
+            Data::Bme280(data) => Ok(format!(r#"{{ "time": {:?}, "temperature": {}, "humidity": {}, "pressure": {} }}"#, time_stamp, data.temperature, data.humidity, data.pressure)),
+            Data::Bma400(data) => Ok(format!(r#"{{ "time": {:?}, "x": {}, "y": {}, "z": {} }}"#, time_stamp, data.x, data.y, data.z)),
+            Data::Mq2(data) => Ok(format!(r#"{{ "time": {:?}, "gas_type": {}, "value": {} }}"#, time_stamp, data.gas_type, data.value)),
+            Data::Gps(data) => Ok(format!(r#"{{ "time": {:?}, "status": {}, "altitude": {}, "latitude": {}, "longitude": {} }}"#, time_stamp, data.status, data.altitude, data.latitude, data.longitude)),
+            Data::Sms(data) => Ok(format!(r#"{{ "time": {:?}, "text": "{}" }}"#, time_stamp, *data)),
+        }
     }
 }
 
