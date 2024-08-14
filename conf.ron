@@ -9,7 +9,7 @@ Config(
     lora_config: LoRaConfig(
         mode: RX,
         reset_gpio: GPIO_66,
-        dio0_gpio: GPIO_69,
+        dio0_gpio: GPIO_60,
         spi_config: SPIConfig(
             spidev_path: "/dev/spidev0.0",
             bits_per_word: 8,
@@ -29,6 +29,6 @@ Config(
         i2c_bus_path: "/dev/i2c-2",
         i2c_address: 118,
         measurement_interval: 10,
-        enabled: false,
+        enabled: true,
     ),
 )
