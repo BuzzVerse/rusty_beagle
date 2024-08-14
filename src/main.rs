@@ -40,7 +40,7 @@ macro_rules! handle_error_exit {
     };
 }
 
-macro_rules! handle_error_contiue {
+macro_rules! handle_error_continue {
     ($func:expr) => {
         match $func {
             Err(e) => {
@@ -118,10 +118,10 @@ async fn main() {
             let mqtt_config = mqtt_config;
             loop {
                 let packet: Packet = mqtt_queue.take().await;
-                let msg = handle_error_contiue!(packet.to_json());
+                let msg = handle_error_continue!(packet.to_json());
                 match packet.data_type {
                     DataType::BME280 => {
-                        handle_error_contiue!(mqtt_clone.publish(&mqtt_config.topic, &msg).await)
+                        handle_error_continue!(mqtt_clone.publish(&mqtt_config.topic, &msg).await)
                     },
                     _ => continue,
                 }
