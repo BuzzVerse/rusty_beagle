@@ -83,9 +83,17 @@ async fn main() {
             let mut bme280 = handle_error_exit!(BME280Sensor::new(bme_config));
 
             loop {
-                if let Err(e) = bme280.print() {
-                    error!("Failed to print BME280 sensor measurements: {:?}", e);
+                match bme280.read_measurements() {
+                    Ok(data) => {
+                        bme280
+                            .print(&data)
+                            .expect("Failed to print BME280 measurements");
+
+                        //TODO: send MQTT Packet Data::Bme280, id - config.mqtt_config.device_id
+                    }
+                    Err(e) => println!("Error reading measurements: {:?}", e),
                 }
+
                 thread::sleep(Duration::from_secs(measurement_interval));
             }
         });

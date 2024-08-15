@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use bme280::i2c::BME280;
+use crate::packet::BME280 as PacketBME280;
 use linux_embedded_hal::{Delay, I2cdev};
 use log::info;
 
@@ -26,29 +27,33 @@ impl BME280Sensor {
         Ok(BME280Sensor { bme280, delay })
     }
 
-    pub fn read_measurements(&mut self) -> Result<(f32, f32, f32)> {
+    pub fn read_measurements(&mut self) -> Result<PacketBME280> {
         let measurements = self
             .bme280
             .measure(&mut self.delay)
             .map_err(|e| anyhow::anyhow!("Failed to read BME280 sensor: {:?}", e))?;
 
-        Ok((
-            measurements.temperature,
-            measurements.pressure / 100.0,
-            measurements.humidity,
-        ))
+        let temperature = (measurements.temperature * 2.0).round() as u8;
+        let pressure = ((measurements.pressure / 100.0) - 1000.0).round() as u8;
+        let humidity = measurements.humidity.round() as u8;
+    
+        Ok(PacketBME280 {
+            temperature,
+            pressure,
+            humidity,
+        })
     }
 
-    pub fn print(&mut self) -> Result<()> {
-        match self.read_measurements() {
-            Ok((temperature, pressure, humidity)) => {
-                info!("BME280 Sensor Measurements:");
-                info!("Temperature: {:>6.1} °C", temperature);
-                info!("Pressure:    {:>7.1} hPa", pressure);
-                info!("Humidity:    {:>6.1} %", humidity);
-                Ok(())
-            }
-            Err(e) => Err(e),
-        }
+    pub fn print(&self, data: &PacketBME280) -> Result<()> {
+        let temperature = data.temperature as f32 / 2.0;
+        let pressure = (data.pressure as f32 + 1000.0) * 100.0;
+        let humidity = data.humidity as f32;
+
+        info!("BME280 Sensor Measurements:");
+        info!("Temperature: {:.1} °C", temperature);
+        info!("Pressure:    {:.1} hPa", pressure / 100.0);
+        info!("Humidity:    {:.1} %", humidity);
+        Ok(())
     }
+    
 }
