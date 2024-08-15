@@ -4,8 +4,8 @@ mod conversions;
 mod defines;
 mod logging;
 mod lora;
-mod packet;
 mod mqtt;
+mod packet;
 mod version_tag;
 
 extern crate log;
@@ -19,13 +19,12 @@ use log::{error, info};
 use lora::LoRa;
 use mqtt::BlockingQueue;
 use mqtt::Mqtt;
-use packet::DataType;
 use packet::Packet;
-use tokio::time::sleep;
-use std::sync::Arc;
 use std::env;
+use std::sync::Arc;
+use std::thread;
 use std::time::Duration;
-
+use tokio::task;
 
 macro_rules! handle_error_exit {
     ($func:expr) => {
@@ -53,7 +52,6 @@ macro_rules! handle_error_continue {
     };
 }
 
-
 fn parse_args() -> String {
     let args: Vec<String> = env::args().collect();
 
@@ -80,7 +78,7 @@ async fn main() {
     let bme_config: BME280Config = config.bme_config.clone();
 
     if bme_config.enabled {
-        tokio::spawn(async move {
+        task::spawn_blocking(move || {
             let measurement_interval = bme_config.measurement_interval;
             let mut bme280 = handle_error_exit!(BME280Sensor::new(bme_config));
 
@@ -88,7 +86,7 @@ async fn main() {
                 if let Err(e) = bme280.print() {
                     error!("Failed to print BME280 sensor measurements: {:?}", e);
                 }
-                sleep(Duration::from_secs(measurement_interval)).await;
+                thread::sleep(Duration::from_secs(measurement_interval));
             }
         });
     }
@@ -119,7 +117,9 @@ async fn main() {
             loop {
                 let packet: Packet = mqtt_queue.take().await;
                 let msg = handle_error_continue!(packet.to_json());
-                let topic = mqtt_config.topic.replace("{device_id}", &packet.id.to_string());
+                let topic = mqtt_config
+                    .topic
+                    .replace("{device_id}", &packet.id.to_string());
                 handle_error_continue!(mqtt_clone.publish(&topic, &msg).await)
             }
         });
