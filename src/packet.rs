@@ -227,13 +227,29 @@ impl Packet {
     }
 
     pub fn to_json(&self) -> Result<String> {
-        let time_stamp = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?;
         match &self.data {
-            Data::Bme280(data) => Ok(format!(r#"{{ "time": {:?}, "temperature": {}, "humidity": {}, "pressure": {} }}"#, time_stamp, data.temperature, data.humidity, data.pressure)),
-            Data::Bma400(data) => Ok(format!(r#"{{ "time": {:?}, "x": {}, "y": {}, "z": {} }}"#, time_stamp, data.x, data.y, data.z)),
-            Data::Mq2(data) => Ok(format!(r#"{{ "time": {:?}, "gas_type": {}, "value": {} }}"#, time_stamp, data.gas_type, data.value)),
-            Data::Gps(data) => Ok(format!(r#"{{ "time": {:?}, "status": {}, "altitude": {}, "latitude": {}, "longitude": {} }}"#, time_stamp, data.status, data.altitude, (data.latitude as f64) / 100_000f64, (data.longitude as f64) / 100_000f64)),
-            Data::Sms(data) => Ok(format!(r#"{{ "time": {:?}, "text": "{}" }}"#, time_stamp, *data)),
+            Data::Bme280(data) => Ok(format!(
+                r#"{{ "BME280": {{ "temperature": {}, "humidity": {}, "pressure": {} }} }}"#,
+                data.temperature, data.humidity, data.pressure
+            )),
+            Data::Bma400(data) => Ok(format!(
+                r#"{{ "BMA400": {{ "x": {}, "y": {}, "z": {} }} }}"#,
+                data.x, data.y, data.z
+            )),
+            Data::Mq2(data) => Ok(format!(
+                r#"{{ "MQ2": {{ "gas_type": {}, "value": {} }} }}"#,
+                data.gas_type, data.value
+            )),
+            Data::Gps(data) => Ok(format!(
+                r#"{{ "GPS": {{ "status": {}, "altitude": {}, "latitude": {}, "longitude": {} }} }}"#,
+                data.status, data.altitude, 
+                (data.latitude as f64) / 100_000f64, 
+                (data.longitude as f64) / 100_000f64
+            )),
+            Data::Sms(data) => Ok(format!(
+                r#"{{ "SMS": {{ "text": "{}" }} }}"#,
+                *data
+            )),
         }
     }
 }

@@ -26,17 +26,9 @@ pub struct MQTTConfig {
     pub port: String,
     pub login: String,
     pub password: String,
-    pub topics: Topics,
+    pub topic: String,
+    pub device_id: u8,
     pub enabled: bool,
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct Topics {
-    pub bme: String,
-    pub bma: String,
-    pub mq2: String,
-    pub gps: String,
-    pub sms: String,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

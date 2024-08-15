@@ -4,13 +4,8 @@ Config(
         port: "1234",
         login: "admin",
         password: "verysecurepassword",
-        topics: Topics(
-            bme: "top/bme",
-            bma: "top/bma",
-            mq2: "top/mq2",
-            gps: "top/mq2",
-            sms: "top/sms",
-        ),
+        topic: "sensors/{device_id}/data",
+        device_id: 1,
         enabled: true,
     ),
     lora_config: LoRaConfig(
