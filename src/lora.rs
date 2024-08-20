@@ -48,7 +48,7 @@ impl LoRa {
     }
 
     #[cfg(target_arch = "x86_64")]
-    pub async fn from_config(_lora_config: &LoRaConfig) -> Result<LoRa> {
+    pub fn from_config(_lora_config: &LoRaConfig) -> Result<LoRa> {
         let mock_registers = [1; 112];
         let dio0_pin = MockGPIO {};
         let mode = _lora_config.mode.clone();
@@ -61,13 +61,13 @@ impl LoRa {
     }
 
     #[cfg(target_arch = "x86_64")]
-    pub async fn spi_read_register(&mut self, register: LoRaRegister, value: &mut u8) -> Result<()> {
+    pub fn spi_read_register(&mut self, register: LoRaRegister, value: &mut u8) -> Result<()> {
         *value = self.mock_registers[register as usize];
         Ok(())
     }
 
     #[cfg(target_arch = "x86_64")]
-    pub async fn spi_write_register(&mut self, register: LoRaRegister, value: u8) -> Result<()> {
+    pub fn spi_write_register(&mut self, register: LoRaRegister, value: u8) -> Result<()> {
         self.mock_registers[register as usize] = value;
         Ok(())
     }

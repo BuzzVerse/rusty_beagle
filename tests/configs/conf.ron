@@ -4,7 +4,8 @@ Config(
         port: "1234",
         login: "admin",
         password: "verysecurepassword",
-        topic: "lora/sensor"
+        topic: "lora/sensor",
+        enabled: false,
     ),
     lora_config: LoRaConfig(
         mode: RX,
