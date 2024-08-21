@@ -17,13 +17,13 @@ pub use crate::logging::start_logger;
 use bme280::BME280Sensor;
 use log::{error, info};
 use lora::LoRa;
-use mqtt::Mqtt;
+use mqtt::{Mqtt, mqtt_thread};
 use packet::Packet;
 use std::env;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
-use std::sync::mpsc::{channel, Sender, Receiver};
+use std::sync::mpsc::{channel, Sender};
 
 macro_rules! handle_error_exit {
     ($func:expr) => {
@@ -77,37 +77,20 @@ fn main() {
     let bme_config: BME280Config = config.bme_config.clone();
 
     let option_sender: Option<Sender<Packet>>;
-    let option_receiver: Option<Receiver<Packet>>;
     let mqtt_enabled = mqtt_config.enabled;
 
     if mqtt_enabled {
         let (sender, receiver) = channel::<Packet>();
         option_sender = Some(sender);
-        option_receiver = Some(receiver);
+        let option_receiver = Some(receiver);
 
         let mqtt = Arc::new(handle_error_exit!(Mqtt::new(mqtt_config.clone())));
         let mqtt_clone = Arc::clone(&mqtt);
         threads.push(thread::spawn(move || {
-            let mqtt_config = mqtt_config;
-            let receiver = match option_receiver {
-                Some(receiver) => receiver,
-                None => {
-                    eprintln!("No receiver created");
-                    error!("No receiver created");
-                    std::process::exit(-1);
-                },
-            };
-            loop {
-                let packet: Packet = handle_error_continue!(receiver.recv());
-                let msg = handle_error_continue!(packet.to_json());
-                let topic = mqtt_config
-                    .topic
-                    .replace("{device_id}", &packet.id.to_string());
-                handle_error_continue!(mqtt_clone.publish(&topic, &msg))
-            }
+            mqtt_thread(mqtt_clone, mqtt_config, option_receiver);
         }));
     } else {
-        (option_sender, option_receiver) = (None, None);
+        option_sender = None;
     }
 
     if bme_config.enabled {
