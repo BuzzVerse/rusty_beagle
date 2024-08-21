@@ -17,14 +17,13 @@ pub use crate::logging::start_logger;
 use bme280::BME280Sensor;
 use log::{error, info};
 use lora::LoRa;
-use mqtt::BlockingQueue;
 use mqtt::Mqtt;
 use packet::Packet;
 use std::env;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
-use tokio::task;
+use std::sync::mpsc::{channel, Sender, Receiver};
 
 macro_rules! handle_error_exit {
     ($func:expr) => {
@@ -67,9 +66,9 @@ fn parse_args() -> String {
     }
 }
 
-#[tokio::main]
-async fn main() {
+fn main() {
     start_logger();
+    let mut threads = Vec::new();
 
     let config_path = parse_args();
     let config = handle_error_exit!(Config::from_file(config_path));
@@ -77,8 +76,51 @@ async fn main() {
     let mqtt_config = config.mqtt_config.clone();
     let bme_config: BME280Config = config.bme_config.clone();
 
+    let option_sender: Option<Sender<Packet>>;
+    let option_receiver: Option<Receiver<Packet>>;
+    let mqtt_enabled = mqtt_config.enabled;
+
+    if mqtt_enabled {
+        let (sender, receiver) = channel::<Packet>();
+        option_sender = Some(sender);
+        option_receiver = Some(receiver);
+
+        let mqtt = Arc::new(handle_error_exit!(Mqtt::new(mqtt_config.clone())));
+        let mqtt_clone = Arc::clone(&mqtt);
+        threads.push(thread::spawn(move || {
+            let mqtt_config = mqtt_config;
+            let receiver = match option_receiver {
+                Some(receiver) => receiver,
+                None => {
+                    eprintln!("No receiver created");
+                    error!("No receiver created");
+                    std::process::exit(-1);
+                },
+            };
+            loop {
+                let packet: Packet = handle_error_continue!(receiver.recv());
+                let msg = handle_error_continue!(packet.to_json());
+                let topic = mqtt_config
+                    .topic
+                    .replace("{device_id}", &packet.id.to_string());
+                handle_error_continue!(mqtt_clone.publish(&topic, &msg))
+            }
+        }));
+    } else {
+        (option_sender, option_receiver) = (None, None);
+    }
+
     if bme_config.enabled {
-        task::spawn_blocking(move || {
+        let bme_sender = match option_sender.clone() {
+            Some(sender) => sender,
+            None => {
+                eprintln!("No sender created");
+                error!("No sender created");
+                std::process::exit(-1);
+            },
+        };
+
+        threads.push(thread::spawn(move || {
             let measurement_interval = bme_config.measurement_interval;
             let mut bme280 = handle_error_exit!(BME280Sensor::new(bme_config));
 
@@ -89,14 +131,16 @@ async fn main() {
                             .print(&data)
                             .expect("Failed to print BME280 measurements");
 
-                        //TODO: send MQTT Packet Data::Bme280, id - config.mqtt_config.device_id
+                        if mqtt_enabled {
+                            todo!("send MQTT Packet Data::Bme280, id - config.mqtt_config.device_id");
+                        }
                     }
                     Err(e) => println!("Error reading measurements: {:?}", e),
                 }
 
                 thread::sleep(Duration::from_secs(measurement_interval));
             }
-        });
+        }));
     }
 
     let mut lora = match LoRa::from_config(&config.lora_config) {
@@ -111,33 +155,13 @@ async fn main() {
         }
     };
 
-    let lora_queue;
 
-    if mqtt_config.enabled {
-        let queue = BlockingQueue::new(128);
-        lora_queue = Some(queue.clone());
-        let mqtt_queue = queue.clone();
+    threads.push(thread::spawn(move || {
+        handle_error_exit!(lora.start(radio_config, option_sender));
+    }));
 
-        let mqtt = Arc::new(handle_error_exit!(Mqtt::new(mqtt_config.clone()).await));
-        let mqtt_clone = Arc::clone(&mqtt);
-        tokio::spawn(async move {
-            let mqtt_config = mqtt_config;
-            loop {
-                let packet: Packet = mqtt_queue.take().await;
-                let msg = handle_error_continue!(packet.to_json());
-                let topic = mqtt_config
-                    .topic
-                    .replace("{device_id}", &packet.id.to_string());
-                handle_error_continue!(mqtt_clone.publish(&topic, &msg).await)
-            }
-        });
-    } else {
-        lora_queue = None;
+    for thread in threads {
+        handle_error_exit!(thread.join());
     }
 
-    let lora_handle = tokio::spawn(async move {
-        handle_error_exit!(lora.start(radio_config, lora_queue).await);
-    });
-
-    handle_error_exit!(lora_handle.await);
 }
