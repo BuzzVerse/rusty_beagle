@@ -3,9 +3,21 @@ use anyhow::{Context, Result};
 use log::{error, info};
 use rumqttc::{Client, MqttOptions, QoS};
 use std::sync::mpsc::Receiver;
-use std::sync::Arc;
 use crate::packet::Packet;
 use crate::config::MQTTConfig;
+
+macro_rules! handle_error_continue {
+    ($func:expr) => {
+        match $func {
+            Err(e) => {
+                eprintln!("{:?}", e);
+                error!("{:?}", e);
+                continue;
+            }
+            Ok(s) => s,
+        }
+    };
+}
 
 pub struct Mqtt {
     client: Client,
@@ -39,37 +51,24 @@ impl Mqtt {
         self.client.publish(topic, QoS::AtLeastOnce, false, msg)?;
         Ok(())
     }
-}
 
-macro_rules! handle_error_continue {
-    ($func:expr) => {
-        match $func {
-            Err(e) => {
-                eprintln!("{:?}", e);
-                error!("{:?}", e);
-                continue;
-            }
-            Ok(s) => s,
+    pub fn thread_run(&self, mqtt_config: MQTTConfig, option_receiver: Option<Receiver<Packet>>) {
+        let receiver = match option_receiver {
+            Some(receiver) => receiver,
+            None => {
+                eprintln!("No receiver created");
+                error!("No receiver created");
+                std::process::exit(-1);
+            },
+        };
+
+        loop {
+            let packet: Packet = handle_error_continue!(receiver.recv());
+            let msg = handle_error_continue!(packet.to_json());
+            let topic = mqtt_config
+                .topic
+                .replace("{device_id}", &packet.id.to_string());
+            handle_error_continue!(self.publish(&topic, &msg));
         }
-    };
-}
-
-pub fn mqtt_thread(mqtt: Arc<Mqtt>, mqtt_config: MQTTConfig, option_receiver: Option<Receiver<Packet>>) {
-    let receiver = match option_receiver {
-        Some(receiver) => receiver,
-        None => {
-            eprintln!("No receiver created");
-            error!("No receiver created");
-            std::process::exit(-1);
-        },
-    };
-
-    loop {
-        let packet: Packet = handle_error_continue!(receiver.recv());
-        let msg = handle_error_continue!(packet.to_json());
-        let topic = mqtt_config
-            .topic
-            .replace("{device_id}", &packet.id.to_string());
-        handle_error_continue!(mqtt.publish(&topic, &msg));
     }
 }

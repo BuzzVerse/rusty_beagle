@@ -17,10 +17,9 @@ pub use crate::logging::start_logger;
 use bme280::BME280Sensor;
 use log::{error, info};
 use lora::LoRa;
-use mqtt::{Mqtt, mqtt_thread};
+use mqtt::Mqtt;
 use packet::{BME280, Data, DataType, Packet};
 use std::env;
-use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 use std::sync::mpsc::{channel, Sender};
@@ -84,10 +83,9 @@ fn main() {
         option_sender = Some(sender);
         let option_receiver = Some(receiver);
 
-        let mqtt = Arc::new(handle_error_exit!(Mqtt::new(mqtt_config.clone())));
-        let mqtt_clone = Arc::clone(&mqtt);
+        let mqtt = handle_error_exit!(Mqtt::new(mqtt_config.clone()));
         threads.push(thread::spawn(move || {
-            mqtt_thread(mqtt_clone, mqtt_config, option_receiver);
+            mqtt.thread_run(mqtt_config, option_receiver);
         }));
     } else {
         option_sender = None;
