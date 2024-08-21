@@ -18,7 +18,7 @@ use bme280::BME280Sensor;
 use log::{error, info};
 use lora::LoRa;
 use mqtt::{Mqtt, mqtt_thread};
-use packet::Packet;
+use packet::{BME280, Data, DataType, Packet};
 use std::env;
 use std::sync::Arc;
 use std::thread;
@@ -94,7 +94,7 @@ fn main() {
     }
 
     if bme_config.enabled {
-        let bme_sender = match option_sender.clone() {
+        let bme280_sender = match option_sender.clone() {
             Some(sender) => sender,
             None => {
                 eprintln!("No sender created");
@@ -115,7 +115,20 @@ fn main() {
                             .expect("Failed to print BME280 measurements");
 
                         if mqtt_enabled {
-                            todo!("send MQTT Packet Data::Bme280, id - config.mqtt_config.device_id");
+                            // TODO rethink version, msg_id and msg_count values
+                            let packet = Packet {
+                                version: 0,
+                                id: config.mqtt_config.device_id,
+                                msg_id: 0,
+                                msg_count: 0,
+                                data_type: DataType::BME280,
+                                data: Data::Bme280(BME280 {
+                                    temperature: data.temperature,
+                                    humidity: data.humidity,
+                                    pressure: data.pressure,
+                                })
+                            };
+                            handle_error_continue!(bme280_sender.send(packet));
                         }
                     }
                     Err(e) => println!("Error reading measurements: {:?}", e),
