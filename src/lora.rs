@@ -11,6 +11,19 @@ use log::{error, info};
 use spidev::{SpiModeFlags, Spidev, SpidevOptions, SpidevTransfer};
 use std::sync::mpsc::Sender;
 
+macro_rules! handle_error_continue {
+    ($func:expr) => {
+        match $func {
+            Err(e) => {
+                eprintln!("{:?}", e);
+                error!("{:?}", e);
+                continue;
+            }
+            Ok(s) => s,
+        }
+    };
+}
+
 #[cfg(target_arch = "arm")]
 pub struct LoRa {
     spidev: Spidev,
@@ -474,7 +487,7 @@ impl LoRa {
         Ok(())
     }
 
-    pub fn start(&mut self, radio_config: RadioConfig, sender: Option<Sender<Packet>>) -> Result<Error> {
+    pub fn start(&mut self, radio_config: RadioConfig, lora_sender: Option<Sender<Packet>>) -> Result<Error> {
         self.reset().context("LoRa::start")?;
         self.sleep_mode().context("LoRa::start")?;
         let frequency = radio_config.frequency;
@@ -524,8 +537,8 @@ impl LoRa {
 
                             if !crc_error {
                                 info!("Received: {:?}", packet);
-                                if let Some(sender) = &sender {
-                                    sender.send(packet)?;
+                                if let Some(lora_sender) = &lora_sender {
+                                    handle_error_continue!(lora_sender.send(packet));
                                 } 
                             }
                         },
