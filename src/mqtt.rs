@@ -1,7 +1,7 @@
 use std::time::Duration;
 use anyhow::{Context, Result};
 use log::{error, info};
-use rumqttc::{Client, MqttOptions, QoS};
+use rumqttc::{Client, Event, MqttOptions, Packet as MqttPacket, Outgoing, QoS};
 use std::sync::mpsc::Receiver;
 use crate::packet::Packet;
 use crate::config::MQTTConfig;
@@ -34,7 +34,15 @@ impl Mqtt {
         std::thread::spawn(move || {
             for notification in connection.iter() {
                 match notification {
-                    Ok(m) => info!("MQTT: {:?}", m),
+                    Ok(m) => {
+                        match m {
+                            Event::Incoming(MqttPacket::PingReq) |
+                            Event::Incoming(MqttPacket::PingResp) |
+                            Event::Outgoing(Outgoing::PingReq) |
+                            Event::Outgoing(Outgoing::PingResp) => continue,
+                            _ => info!("MQTT: {:?}", m)
+                        }
+                    },
                     Err(e) => {
                         eprintln!("{:?}", e);
                         error!("MQTT: {:?}", e);
