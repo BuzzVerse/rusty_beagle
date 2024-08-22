@@ -1,10 +1,38 @@
+use std::time::Duration;
+use std::thread;
 use anyhow::{Context, Result};
 use bme280::i2c::BME280;
-use crate::packet::BME280 as PacketBME280;
+use crate::packet::{BME280 as PacketBME280, Data, DataType, Packet};
 use linux_embedded_hal::{Delay, I2cdev};
-use log::info;
-
+use log::{error, info};
 use crate::BME280Config;
+use std::sync::mpsc::Sender;
+
+macro_rules! handle_error_exit {
+    ($func:expr) => {
+        match $func {
+            Err(e) => {
+                eprintln!("{:?}", e);
+                error!("{:?}", e);
+                std::process::exit(-1);
+            }
+            Ok(s) => s,
+        }
+    };
+}
+
+macro_rules! handle_error_continue {
+    ($func:expr) => {
+        match $func {
+            Err(e) => {
+                eprintln!("{:?}", e);
+                error!("{:?}", e);
+                continue;
+            }
+            Ok(s) => s,
+        }
+    };
+}
 
 pub struct BME280Sensor {
     bme280: BME280<I2cdev>,
@@ -55,5 +83,47 @@ impl BME280Sensor {
         info!("Humidity:    {:.1} %", humidity);
         Ok(())
     }
-    
+
+    pub fn thread_run(&mut self, bme280_config: BME280Config, mqtt_enabled: bool, device_id: u8, option_sender: Option<Sender<Packet>>) {
+        let measurement_interval = bme280_config.measurement_interval;
+
+        let bme280_sender = match option_sender.clone() {
+            Some(sender) => sender,
+            None => {
+                eprintln!("No sender created");
+                error!("No sender created");
+                std::process::exit(-1);
+            },
+        };
+
+        loop {
+            match self.read_measurements() {
+                Ok(data) => {
+                    self
+                        .print(&data)
+                        .expect("Failed to print BME280 measurements");
+
+                    if mqtt_enabled {
+                        // TODO rethink version, msg_id and msg_count values
+                        let packet = Packet {
+                            version: 0,
+                            id: device_id,
+                            msg_id: 0,
+                            msg_count: 0,
+                            data_type: DataType::BME280,
+                            data: Data::Bme280(PacketBME280 {
+                                temperature: data.temperature,
+                                humidity: data.humidity,
+                                pressure: data.pressure,
+                            })
+                        };
+                        handle_error_continue!(bme280_sender.send(packet));
+                    }
+                }
+                Err(e) => println!("Error reading measurements: {:?}", e),
+            }
+
+            thread::sleep(Duration::from_secs(measurement_interval));
+        }
+    }
 }

@@ -73,67 +73,30 @@ fn main() {
     let config = handle_error_exit!(Config::from_file(config_path));
     let radio_config = config.lora_config.radio_config.clone();
     let mqtt_config = config.mqtt_config.clone();
-    let bme_config: BME280Config = config.bme_config.clone();
+    let bme280_config: BME280Config = config.bme_config.clone();
 
     let option_sender: Option<Sender<Packet>>;
     let mqtt_enabled = mqtt_config.enabled;
+    let device_id = mqtt_config.device_id;
 
     if mqtt_enabled {
         let (sender, receiver) = channel::<Packet>();
         option_sender = Some(sender);
         let option_receiver = Some(receiver);
 
-        let mqtt = handle_error_exit!(Mqtt::new(mqtt_config.clone()));
         threads.push(thread::spawn(move || {
+            let mqtt = handle_error_exit!(Mqtt::new(mqtt_config.clone()));
             mqtt.thread_run(mqtt_config, option_receiver);
         }));
     } else {
         option_sender = None;
     }
 
-    if bme_config.enabled {
-        let bme280_sender = match option_sender.clone() {
-            Some(sender) => sender,
-            None => {
-                eprintln!("No sender created");
-                error!("No sender created");
-                std::process::exit(-1);
-            },
-        };
-
+    if bme280_config.enabled {
+        let option_sender = option_sender.clone();
         threads.push(thread::spawn(move || {
-            let measurement_interval = bme_config.measurement_interval;
-            let mut bme280 = handle_error_exit!(BME280Sensor::new(bme_config));
-
-            loop {
-                match bme280.read_measurements() {
-                    Ok(data) => {
-                        bme280
-                            .print(&data)
-                            .expect("Failed to print BME280 measurements");
-
-                        if mqtt_enabled {
-                            // TODO rethink version, msg_id and msg_count values
-                            let packet = Packet {
-                                version: 0,
-                                id: config.mqtt_config.device_id,
-                                msg_id: 0,
-                                msg_count: 0,
-                                data_type: DataType::BME280,
-                                data: Data::Bme280(BME280 {
-                                    temperature: data.temperature,
-                                    humidity: data.humidity,
-                                    pressure: data.pressure,
-                                })
-                            };
-                            handle_error_continue!(bme280_sender.send(packet));
-                        }
-                    }
-                    Err(e) => println!("Error reading measurements: {:?}", e),
-                }
-
-                thread::sleep(Duration::from_secs(measurement_interval));
-            }
+            let mut bme280 = handle_error_exit!(BME280Sensor::new(bme280_config.clone()));
+            bme280.thread_run(bme280_config, mqtt_enabled, device_id, option_sender);
         }));
     }
 
