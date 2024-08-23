@@ -487,7 +487,7 @@ impl LoRa {
         Ok(())
     }
 
-    pub fn start(&mut self, radio_config: RadioConfig, lora_sender: Option<Sender<Packet>>) -> Result<Error> {
+    pub fn start(&mut self, radio_config: RadioConfig, option_sender: Option<Sender<Packet>>) -> Result<Error> {
         self.reset().context("LoRa::start")?;
         self.sleep_mode().context("LoRa::start")?;
         let frequency = radio_config.frequency;
@@ -536,7 +536,7 @@ impl LoRa {
                             info!("Received: {:?}, SNR = {} dB, RSSI = {} dBm", packet, snr, rssi);
 
                             if !crc_error {
-                                if let Some(lora_sender) = &lora_sender {
+                                if let Some(lora_sender) = &option_sender {
                                     handle_error_continue!(lora_sender.send(packet));
                                 } 
                             }

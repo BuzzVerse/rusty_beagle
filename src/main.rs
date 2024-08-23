@@ -63,7 +63,7 @@ fn main() {
 
     let option_sender: Option<Sender<Packet>>;
     let mqtt_enabled = mqtt_config.enabled;
-    let device_id = mqtt_config.device_id;
+    let option_device_id = if mqtt_enabled { Some(mqtt_config.device_id) } else { None };
 
     if mqtt_enabled {
         let (sender, receiver) = channel::<Packet>();
@@ -82,7 +82,7 @@ fn main() {
         let option_sender = option_sender.clone();
         threads.push(thread::spawn(move || {
             let mut bme280 = handle_error_exit!(BME280Sensor::new(bme280_config.clone()));
-            bme280.thread_run(bme280_config, mqtt_enabled, device_id, option_sender);
+            bme280.thread_run(bme280_config, mqtt_enabled, option_device_id, option_sender);
         }));
     }
 

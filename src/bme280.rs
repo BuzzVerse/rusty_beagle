@@ -71,17 +71,8 @@ impl BME280Sensor {
         Ok(())
     }
 
-    pub fn thread_run(&mut self, bme280_config: BME280Config, mqtt_enabled: bool, device_id: u8, option_sender: Option<Sender<Packet>>) {
+    pub fn thread_run(&mut self, bme280_config: BME280Config, mqtt_enabled: bool, option_device_id: Option<u8>, option_sender: Option<Sender<Packet>>) {
         let measurement_interval = bme280_config.measurement_interval;
-
-        let bme280_sender = match option_sender.clone() {
-            Some(sender) => sender,
-            None => {
-                eprintln!("No sender created");
-                error!("No sender created");
-                std::process::exit(-1);
-            },
-        };
 
         loop {
             match self.read_measurements() {
@@ -94,7 +85,7 @@ impl BME280Sensor {
                         // TODO rethink version, msg_id and msg_count values
                         let packet = Packet {
                             version: 0,
-                            id: device_id,
+                            id: option_device_id.expect("option_device_id shouldn't be none if MQTT is enabled"),
                             msg_id: 0,
                             msg_count: 0,
                             data_type: DataType::BME280,
@@ -104,7 +95,10 @@ impl BME280Sensor {
                                 pressure: data.pressure,
                             })
                         };
-                        handle_error_continue!(bme280_sender.send(packet));
+
+                        if let Some(bme280_sender) = &option_sender {
+                            handle_error_continue!(bme280_sender.send(packet));
+                        }
                     }
                 }
                 Err(e) => println!("Error reading measurements: {:?}", e),
