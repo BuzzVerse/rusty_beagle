@@ -536,7 +536,6 @@ impl LoRa {
                             info!("Received: {:?}, SNR = {} dB, RSSI = {} dBm", packet, snr, rssi);
 
                             if !crc_error {
-                                info!("Received: {:?}", packet);
                                 if let Some(lora_sender) = &lora_sender {
                                     handle_error_continue!(lora_sender.send(packet));
                                 } 
