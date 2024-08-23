@@ -48,7 +48,7 @@ impl LoRa {
     }
 
     #[cfg(target_arch = "x86_64")]
-    pub async fn from_config(_lora_config: &LoRaConfig) -> Result<LoRa> {
+    pub fn from_config(_lora_config: &LoRaConfig) -> Result<LoRa> {
         let mock_registers = [1; 112];
         let dio0_pin = MockGPIO {};
         let mode = _lora_config.mode.clone();
@@ -61,13 +61,13 @@ impl LoRa {
     }
 
     #[cfg(target_arch = "x86_64")]
-    pub async fn spi_read_register(&mut self, register: LoRaRegister, value: &mut u8) -> Result<()> {
+    pub fn spi_read_register(&mut self, register: LoRaRegister, value: &mut u8) -> Result<()> {
         *value = self.mock_registers[register as usize];
         Ok(())
     }
 
     #[cfg(target_arch = "x86_64")]
-    pub async fn spi_write_register(&mut self, register: LoRaRegister, value: u8) -> Result<()> {
+    pub fn spi_write_register(&mut self, register: LoRaRegister, value: u8) -> Result<()> {
         self.mock_registers[register as usize] = value;
         Ok(())
     }
@@ -362,7 +362,7 @@ impl LoRa {
         Ok((value >> 4) + 8)
     }
 
-    pub async fn get_frequency(&mut self) -> Result<[u8; 3]> {
+    pub async fn get_frequency(&mut self) -> Result<u64> {
         let mut values: [u8; 3] = [0, 0, 0];
         self.spi_read_register(LoRaRegister::FRF_MSB, &mut values[0])
             .context("LoRa::get_frequency")?;
@@ -371,7 +371,13 @@ impl LoRa {
         self.spi_read_register(LoRaRegister::FRF_LSB, &mut values[2])
             .context("LoRa::get_frequency")?;
 
-        Ok(values)
+        let msb = (values[0] as u32) << 16;
+        let mid = (values[1] as u32) << 8;
+        let lsb = values[2] as u32;
+        let frf = msb | mid | lsb;
+        let frequency = (frf as u64) * (32_000_000/(0b1 << 19) as u64);
+
+        Ok(frequency)
     }
 
     pub async fn config_radio(&mut self, radio_config: RadioConfig) -> Result<()> {
@@ -471,6 +477,7 @@ impl LoRa {
     pub async fn start(&mut self, radio_config: RadioConfig, queue: Option<BlockingQueue<Packet>>) -> Result<Error> {
         self.reset().await.context("LoRa::start")?;
         self.sleep_mode().await.context("LoRa::start")?;
+        let frequency = radio_config.frequency;
         self.config_radio(radio_config).await.context("LoRa::start")?;
         self.config_dio().await.context("LoRa::start")?;
         self.spi_write_register(LoRaRegister::MODEM_CONFIG_3, 0x04u8)
@@ -478,6 +485,7 @@ impl LoRa {
         print_rusty_beagle();
         print_version_tag();
         println!("+-------------------------+");
+        println!("| Frequency: {} MHz      |", frequency/1_000_000);
         println!("| Bandwidth: {}            |", self.get_bandwidth().await.context("LoRa::start")?);
         println!("| Coding rate: {}          |", self.get_coding_rate().await.context("LoRa::start")?);
         println!("| Spreading factor: {:02}    |", self.get_spreading_factor().await.context("LoRa::start")?);
@@ -509,9 +517,12 @@ impl LoRa {
 
                     match Packet::new(&received_buffer) {
                         Ok(packet) => {
-                            println!("Received: {:#?}", packet);
+                            let snr = self.get_packet_snr().await.context("LoRa::start")?;
+                            let rssi = self.get_packet_rssi().await.context("LoRa::start")?;
+                            println!("Received: {:#?}, SNR = {} dB, RSSI = {} dBm", packet, snr, rssi);
+                            info!("Received: {:?}, SNR = {} dB, RSSI = {} dBm", packet, snr, rssi);
+
                             if !crc_error {
-                                info!("Received: {:?}", packet);
                                 if let Some(queue) = &queue {
                                     queue.put(packet).await;
                                 };
@@ -590,6 +601,29 @@ impl LoRa {
         }
 
         Ok(())
+    }
+
+    /*
+     * Returns SNR[dB] on last packet received
+     */
+    pub async fn get_packet_snr(&mut self) -> Result<u8> {
+        let mut value: u8 = 0x00;
+        self.spi_read_register(LoRaRegister::PKT_SNR_VALUE, &mut value).context("LoRa::get_packet_snr")?;
+
+        let snr = value.wrapping_neg()/4;
+        Ok(snr)
+    }
+
+    /*
+     * Returns RSSI[dBm] of the last packet received
+     */
+    pub async fn get_packet_rssi(&mut self) -> Result<i16> {
+        let mut value: u8 = 0x00;
+        let frequency = self.get_frequency().await.context("LoRa::get_packet_rssi")?;
+        self.spi_read_register(LoRaRegister::PKT_RSSI_VALUE, &mut value).context("LoRa::get_packet_rssi")?;
+
+        let rssi = if frequency < 868_000_000 { -164 + (value as i16) } else { -157 + (value as i16) };
+        Ok(rssi)
     }
 }
 
