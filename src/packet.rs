@@ -2,7 +2,7 @@ use core::fmt;
 use crate::conversions::*;
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
-use std::{fmt::format, hash::{DefaultHasher, Hash, Hasher}, time::SystemTime};
+use std::hash::Hash;
 
 pub const DATA_SIZE: usize = 59;
 pub const META_DATA_SIZE: usize = 5;

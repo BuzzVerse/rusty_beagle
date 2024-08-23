@@ -18,10 +18,9 @@ use bme280::BME280Sensor;
 use log::{error, info};
 use lora::LoRa;
 use mqtt::Mqtt;
-use packet::{BME280, Data, DataType, Packet};
+use packet::Packet;
 use std::env;
 use std::thread;
-use std::time::Duration;
 use std::sync::mpsc::{channel, Sender};
 
 macro_rules! handle_error_exit {
@@ -31,19 +30,6 @@ macro_rules! handle_error_exit {
                 eprintln!("{:?}", e);
                 error!("{:?}", e);
                 std::process::exit(-1);
-            }
-            Ok(s) => s,
-        }
-    };
-}
-
-macro_rules! handle_error_continue {
-    ($func:expr) => {
-        match $func {
-            Err(e) => {
-                eprintln!("{:?}", e);
-                error!("{:?}", e);
-                continue;
             }
             Ok(s) => s,
         }

@@ -8,19 +8,6 @@ use log::{error, info};
 use crate::BME280Config;
 use std::sync::mpsc::Sender;
 
-macro_rules! handle_error_exit {
-    ($func:expr) => {
-        match $func {
-            Err(e) => {
-                eprintln!("{:?}", e);
-                error!("{:?}", e);
-                std::process::exit(-1);
-            }
-            Ok(s) => s,
-        }
-    };
-}
-
 macro_rules! handle_error_continue {
     ($func:expr) => {
         match $func {
