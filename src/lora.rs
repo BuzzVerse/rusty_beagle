@@ -2,7 +2,8 @@ use core::time;
 
 use crate::config::RadioConfig;
 use crate::defines::*;
-use crate::packet::{Data, DataType, Packet, BME280};
+use crate::mqtt::MQTTMessage;
+use crate::packet::{Data, DataType, Packet, PacketWrapper, BME280};
 use crate::version_tag::{print_rusty_beagle, print_version_tag};
 use crate::{GPIOPin, GPIOPinNumber, LoRaConfig, Mode};
 use anyhow::{anyhow, Context, Error, Result};
@@ -487,7 +488,7 @@ impl LoRa {
         Ok(())
     }
 
-    pub fn start(&mut self, radio_config: RadioConfig, option_sender: Option<Sender<Packet>>) -> Result<Error> {
+    pub fn start(&mut self, radio_config: RadioConfig, option_sender: Option<Sender<MQTTMessage>>) -> Result<Error> {
         self.reset().context("LoRa::start")?;
         self.sleep_mode().context("LoRa::start")?;
         let frequency = radio_config.frequency;
@@ -537,7 +538,12 @@ impl LoRa {
 
                             if !crc_error {
                                 if let Some(lora_sender) = &option_sender {
-                                    handle_error_continue!(lora_sender.send(packet));
+                                    let wrapped = PacketWrapper {
+                                        packet,
+                                        snr,
+                                        rssi,
+                                    };
+                                    handle_error_continue!(lora_sender.send(MQTTMessage::PacketWrapper(wrapped)));
                                 } 
                             }
                         },

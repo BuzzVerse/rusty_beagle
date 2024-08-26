@@ -3,7 +3,7 @@ use anyhow::{Context, Result};
 use log::{error, info};
 use rumqttc::{Client, Event, MqttOptions, Packet as MqttPacket, Outgoing, QoS};
 use std::sync::mpsc::Receiver;
-use crate::packet::Packet;
+use crate::packet::{Packet, PacketWrapper};
 use crate::config::MQTTConfig;
 
 macro_rules! handle_error_continue {
@@ -17,6 +17,30 @@ macro_rules! handle_error_continue {
             Ok(s) => s,
         }
     };
+}
+
+/// An enum to represent any message that could be sent through MQTT.
+/// It provides an interface to convert different packet types to JSON,
+/// and to extract specific fields (e.g. device_id) from different packet types.
+pub enum MQTTMessage {
+    Packet(Packet),
+    PacketWrapper(PacketWrapper),
+}
+
+impl MQTTMessage {
+    pub fn to_json(&self) -> Result<String> {
+        match self {
+            MQTTMessage::Packet(packet) => Ok(packet.to_json()?),
+            MQTTMessage::PacketWrapper(wrapped) => Ok(wrapped.to_json()?),
+        }
+    }
+
+    pub fn get_device_id(&self) -> u8 {
+        match self {
+            MQTTMessage::Packet(packet) => packet.id,
+            MQTTMessage::PacketWrapper(wrapped) => wrapped.packet.id,
+        }
+    }
 }
 
 pub struct Mqtt {
@@ -60,7 +84,7 @@ impl Mqtt {
         Ok(())
     }
 
-    pub fn thread_run(&self, mqtt_config: MQTTConfig, option_receiver: Option<Receiver<Packet>>) {
+    pub fn thread_run(&self, mqtt_config: MQTTConfig, option_receiver: Option<Receiver<MQTTMessage>>) {
         let receiver = match option_receiver {
             Some(receiver) => receiver,
             None => {
@@ -71,11 +95,11 @@ impl Mqtt {
         };
 
         loop {
-            let packet: Packet = handle_error_continue!(receiver.recv());
-            let msg = handle_error_continue!(packet.to_json());
+            let received = handle_error_continue!(receiver.recv());
+            let msg = handle_error_continue!(received.to_json());
             let topic = mqtt_config
                 .topic
-                .replace("{device_id}", &packet.id.to_string());
+                .replace("{device_id}", &received.get_device_id().to_string());
             handle_error_continue!(self.publish(&topic, &msg));
         }
     }

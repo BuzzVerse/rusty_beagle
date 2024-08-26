@@ -2,7 +2,8 @@ use std::time::Duration;
 use std::thread;
 use anyhow::{Context, Result};
 use bme280::i2c::BME280;
-use crate::packet::{BME280 as PacketBME280, Data, DataType, Packet};
+use crate::mqtt::MQTTMessage;
+use crate::packet::{Data, DataType, Packet, BME280 as PacketBME280};
 use linux_embedded_hal::{Delay, I2cdev};
 use log::{error, info};
 use crate::BME280Config;
@@ -71,7 +72,7 @@ impl BME280Sensor {
         Ok(())
     }
 
-    pub fn thread_run(&mut self, bme280_config: BME280Config, mqtt_enabled: bool, option_device_id: Option<u8>, option_sender: Option<Sender<Packet>>) {
+    pub fn thread_run(&mut self, bme280_config: BME280Config, mqtt_enabled: bool, option_device_id: Option<u8>, option_sender: Option<Sender<MQTTMessage>>) {
         let measurement_interval = bme280_config.measurement_interval;
 
         loop {
@@ -97,7 +98,7 @@ impl BME280Sensor {
                         };
 
                         if let Some(bme280_sender) = &option_sender {
-                            handle_error_continue!(bme280_sender.send(packet));
+                            handle_error_continue!(bme280_sender.send(MQTTMessage::Packet(packet)));
                         }
                     }
                 }

@@ -254,6 +254,25 @@ impl Packet {
     }
 }
 
+/// A struct to wrap a LoRa packet with additional data about
+/// SNR (signal to noise ratio)
+/// and RSSI (received signal strength indicator)
+pub struct PacketWrapper {
+    pub packet: Packet,
+    pub snr: u8,
+    pub rssi: i16,
+}
+
+impl PacketWrapper {
+    pub fn to_json(&self) -> Result<String> {
+        let packet_as_string = self.packet.to_json()?;
+        Ok(format!(
+            r#"{{ "packet": {}, "snr": {}, "rssi": {} }}"#,
+            packet_as_string, self.snr, self.rssi
+        ))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

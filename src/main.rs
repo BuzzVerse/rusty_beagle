@@ -17,11 +17,10 @@ pub use crate::logging::start_logger;
 use bme280::BME280Sensor;
 use log::{error, info};
 use lora::LoRa;
-use mqtt::Mqtt;
-use packet::Packet;
+use mqtt::{Mqtt, MQTTMessage};
 use std::env;
 use std::thread;
-use std::sync::mpsc::{channel, Sender};
+use std::sync::mpsc::channel;
 
 macro_rules! handle_error_exit {
     ($func:expr) => {
@@ -61,12 +60,12 @@ fn main() {
     let mqtt_config = config.mqtt_config.clone();
     let bme280_config: BME280Config = config.bme_config.clone();
 
-    let option_sender: Option<Sender<Packet>>;
+    let option_sender;
     let mqtt_enabled = mqtt_config.enabled;
     let option_device_id = if mqtt_enabled { Some(mqtt_config.device_id) } else { None };
 
     if mqtt_enabled {
-        let (sender, receiver) = channel::<Packet>();
+        let (sender, receiver) = channel::<MQTTMessage>();
         option_sender = Some(sender);
         let option_receiver = Some(receiver);
 
