@@ -242,9 +242,9 @@ impl Packet {
             )),
             Data::Gps(data) => Ok(format!(
                 r#""GPS": {{ "status": {}, "altitude": {}, "latitude": {}, "longitude": {} }}"#,
-                data.status, data.altitude, 
-                (data.latitude as f64) / 100_000f64, 
-                (data.longitude as f64) / 100_000f64
+                data.status, data.altitude,
+                (data.latitude as f64) / 10_000_000f64,
+                (data.longitude as f64) / 10_000_000f64
             )),
             Data::Sms(data) => Ok(format!(
                 r#""SMS": {{ "text": "{}" }}"#,
