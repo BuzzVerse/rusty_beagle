@@ -63,6 +63,8 @@ impl Mqtt {
                         match m {
                             Event::Incoming(MqttPacket::PingReq) |
                             Event::Incoming(MqttPacket::PingResp) |
+                            Event::Incoming(MqttPacket::PubAck(..)) |
+                            Event::Outgoing(Outgoing::Publish(..)) |
                             Event::Outgoing(Outgoing::PingReq) |
                             Event::Outgoing(Outgoing::PingResp) => continue,
                             _ => info!("MQTT: {:?}", m)
