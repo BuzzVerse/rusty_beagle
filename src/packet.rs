@@ -229,28 +229,42 @@ impl Packet {
     pub fn to_json(&self) -> Result<String> {
         match &self.data {
             Data::Bme280(data) => Ok(format!(
-                r#"{{ "BME280": {{ "temperature": {}, "humidity": {}, "pressure": {} }} }}"#,
+                r#""BME280": {{ "temperature": {}, "humidity": {}, "pressure": {} }}"#,
                 data.temperature, data.humidity, data.pressure
             )),
             Data::Bma400(data) => Ok(format!(
-                r#"{{ "BMA400": {{ "x": {}, "y": {}, "z": {} }} }}"#,
+                r#""BMA400": {{ "x": {}, "y": {}, "z": {} }}"#,
                 data.x, data.y, data.z
             )),
             Data::Mq2(data) => Ok(format!(
-                r#"{{ "MQ2": {{ "gas_type": {}, "value": {} }} }}"#,
+                r#""MQ2": {{ "gas_type": {}, "value": {} }}"#,
                 data.gas_type, data.value
             )),
             Data::Gps(data) => Ok(format!(
-                r#"{{ "GPS": {{ "status": {}, "altitude": {}, "latitude": {}, "longitude": {} }} }}"#,
+                r#""GPS": {{ "status": {}, "altitude": {}, "latitude": {}, "longitude": {} }}"#,
                 data.status, data.altitude, 
                 (data.latitude as f64) / 100_000f64, 
                 (data.longitude as f64) / 100_000f64
             )),
             Data::Sms(data) => Ok(format!(
-                r#"{{ "SMS": {{ "text": "{}" }} }}"#,
+                r#""SMS": {{ "text": "{}" }}"#,
                 *data
             )),
         }
+    }
+}
+
+pub struct Metadata {
+    pub snr: u8,
+    pub rssi: i16,
+}
+
+impl Metadata {
+    pub fn to_json(&self) -> Result<String> {
+        Ok(format!(
+                r#""META": {{ "snr": {}, "rssi": {} }}"#,
+                self.snr, self.rssi
+        ))
     }
 }
 
@@ -259,16 +273,14 @@ impl Packet {
 /// and RSSI (received signal strength indicator)
 pub struct PacketWrapper {
     pub packet: Packet,
-    pub snr: u8,
-    pub rssi: i16,
+    pub metadata: Metadata,
 }
 
 impl PacketWrapper {
     pub fn to_json(&self) -> Result<String> {
-        let packet_as_string = self.packet.to_json()?;
         Ok(format!(
-            r#"{{ "packet": {}, "snr": {}, "rssi": {} }}"#,
-            packet_as_string, self.snr, self.rssi
+            r#"{{ {}, {} }}"#,
+            self.packet.to_json()?, self.metadata.to_json()?
         ))
     }
 }

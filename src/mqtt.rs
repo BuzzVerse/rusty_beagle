@@ -30,7 +30,8 @@ pub enum MQTTMessage {
 impl MQTTMessage {
     pub fn to_json(&self) -> Result<String> {
         match self {
-            MQTTMessage::Packet(packet) => Ok(packet.to_json()?),
+            MQTTMessage::Packet(packet) 
+                => Ok(format!(r#"{{ {} }}"#, packet.to_json()?)),
             MQTTMessage::PacketWrapper(wrapped) => Ok(wrapped.to_json()?),
         }
     }

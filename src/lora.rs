@@ -3,7 +3,7 @@ use core::time;
 use crate::config::RadioConfig;
 use crate::defines::*;
 use crate::mqtt::MQTTMessage;
-use crate::packet::{Data, DataType, Packet, PacketWrapper, BME280};
+use crate::packet::{Data, DataType, Metadata, Packet, PacketWrapper, BME280};
 use crate::version_tag::{print_rusty_beagle, print_version_tag};
 use crate::{GPIOPin, GPIOPinNumber, LoRaConfig, Mode};
 use anyhow::{anyhow, Context, Error, Result};
@@ -540,8 +540,7 @@ impl LoRa {
                                 if let Some(lora_sender) = &option_sender {
                                     let wrapped = PacketWrapper {
                                         packet,
-                                        snr,
-                                        rssi,
+                                        metadata: Metadata {snr, rssi},
                                     };
                                     handle_error_continue!(lora_sender.send(MQTTMessage::PacketWrapper(wrapped)));
                                 } 
@@ -569,7 +568,7 @@ impl LoRa {
 
                     let packet = Packet {
                         version: 0x33,
-                        id: 0x22,
+                        id: 255, // device_id = 255 for tests
                         msg_id: 0x11,
                         msg_count: 0x00,
                         data_type: DataType::BME280,
