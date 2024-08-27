@@ -230,7 +230,7 @@ impl Packet {
         match &self.data {
             Data::Bme280(data) => Ok(format!(
                 r#""BME280": {{ "temperature": {}, "humidity": {}, "pressure": {} }}"#,
-                data.temperature, data.humidity, data.pressure
+                data.temperature as f32 / 2.0, data.humidity as f32, data.pressure as f32 + 1000.0
             )),
             Data::Bma400(data) => Ok(format!(
                 r#""BMA400": {{ "x": {}, "y": {}, "z": {} }}"#,
