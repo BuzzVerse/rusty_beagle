@@ -163,7 +163,7 @@ mod tests {
 
     #[test]
     fn config_correct() {
-        assert!(Config::from_file("./tests/configs/conf.ron".to_string()).is_ok());
+        assert!(Config::from_file("./conf.ron".to_string()).is_ok());
     }
 
     #[test]
