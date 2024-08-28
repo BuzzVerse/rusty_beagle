@@ -4,11 +4,12 @@ use log::info;
 use serde::{Deserialize, Serialize};
 use std::fs;
 
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
-    pub mqtt_config: MQTTConfig,
-    pub lora_config: LoRaConfig,
-    pub bme_config: BME280Config
+    pub mqtt_config: Option<MQTTConfig>,
+    pub lora_config: Option<LoRaConfig>,
+    pub bme_config: Option<BME280Config>
 }
 
 impl Config {

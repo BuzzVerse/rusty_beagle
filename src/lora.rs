@@ -666,7 +666,7 @@ mod tests {
     #[test]
     fn spi_read_register_correct() {
         let config = handle_error!(Config::from_file("./conf.ron".to_string()));
-        let mut lora = match LoRa::from_config(&config.lora_config) {
+        let mut lora = match LoRa::from_config(&config.lora_config.unwrap()) {
             Ok(lora) => lora,
             Err(e) => {
                 error!("When creating lora object: {e}");
@@ -683,7 +683,7 @@ mod tests {
     #[test]
     fn spi_write_register_correct() {
         let config = handle_error!(Config::from_file("./conf.ron".to_string()));
-        let mut lora = match LoRa::from_config(&config.lora_config) {
+        let mut lora = match LoRa::from_config(&config.lora_config.unwrap()) {
             Ok(lora) => lora,
             Err(e) => {
                 error!("When creating lora object: {e}");
@@ -700,7 +700,7 @@ mod tests {
     #[test]
     fn standby_mode_correct() {
         let config = handle_error!(Config::from_file("./conf.ron".to_string()));
-        let mut lora = match LoRa::from_config(&config.lora_config) {
+        let mut lora = match LoRa::from_config(&config.lora_config.unwrap()) {
             Ok(lora) => lora,
             Err(e) => {
                 error!("When creating lora object: {e}");
@@ -718,7 +718,7 @@ mod tests {
     #[test]
     fn sleep_mode_correct() {
         let config = handle_error!(Config::from_file("./conf.ron".to_string()));
-        let mut lora = match LoRa::from_config(&config.lora_config) {
+        let mut lora = match LoRa::from_config(&config.lora_config.unwrap()) {
             Ok(lora) => lora,
             Err(e) => {
                 error!("When creating lora object: {e}");
@@ -736,7 +736,7 @@ mod tests {
     #[test]
     fn receive_mode_correct() {
         let config = handle_error!(Config::from_file("./conf.ron".to_string()));
-        let mut lora = match LoRa::from_config(&config.lora_config) {
+        let mut lora = match LoRa::from_config(&config.lora_config.unwrap()) {
             Ok(lora) => lora,
             Err(e) => {
                 error!("When creating lora object: {e}");
@@ -757,7 +757,7 @@ mod tests {
     #[test]
     fn transmit_mode_correct() {
         let config = handle_error!(Config::from_file("./conf.ron".to_string()));
-        let mut lora = match LoRa::from_config(&config.lora_config) {
+        let mut lora = match LoRa::from_config(&config.lora_config.unwrap()) {
             Ok(lora) => lora,
             Err(e) => {
                 error!("When creating lora object: {e}");
