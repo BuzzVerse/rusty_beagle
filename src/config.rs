@@ -15,7 +15,7 @@ pub struct Config {
 impl Config {
     pub fn from_file(config_path: String) -> Result<Config> {
         let config_file = fs::read_to_string(config_path).context("Config::from_file")?;
-        let config = ron::from_str(config_file.as_str()).context("Config::from_file")?;
+        let config = toml::from_str(config_file.as_str()).context("Config::from_file")?;
         info!("Succesfully read config file.");
         Ok(config)
     }
@@ -30,7 +30,6 @@ pub struct MQTTConfig {
     pub topic: String,
     pub device_id: u8,
     pub reconnect_interval: u64,
-    pub enabled: bool,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -38,7 +37,6 @@ pub struct BME280Config {
     pub i2c_bus_path: String,
     pub i2c_address: u8,
     pub measurement_interval: u64,
-    pub enabled: bool,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -164,11 +162,11 @@ mod tests {
 
     #[test]
     fn config_correct() {
-        assert!(Config::from_file("./conf.ron".to_string()).is_ok());
+        assert!(Config::from_file("./tests/configs/conf.toml".to_string()).is_ok());
     }
 
     #[test]
     fn config_incomplete() {
-        assert!(Config::from_file("./tests/configs/incomplete_conf.ron".to_string()).is_err());
+        assert!(Config::from_file("./tests/configs/incomplete_conf.toml".to_string()).is_err());
     }
 }

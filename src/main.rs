@@ -39,7 +39,7 @@ fn parse_args() -> String {
     let args: Vec<String> = env::args().collect();
 
     match args.len() {
-        1 => "./conf.ron".to_string(),
+        1 => "./conf.toml".to_string(),
         2 => args[1].to_string(),
         _ => {
             eprintln!("Wrong number of arguments!");
