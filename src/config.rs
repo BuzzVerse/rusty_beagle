@@ -27,6 +27,7 @@ pub struct MQTTConfig {
     pub login: String,
     pub password: String,
     pub topic: String,
+    pub device_id: u8,
     pub enabled: bool,
 }
 

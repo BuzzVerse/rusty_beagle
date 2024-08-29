@@ -2,7 +2,7 @@ use core::fmt;
 use crate::conversions::*;
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
-use std::{fmt::format, hash::{DefaultHasher, Hash, Hasher}, time::SystemTime};
+use std::hash::Hash;
 
 pub const DATA_SIZE: usize = 59;
 pub const META_DATA_SIZE: usize = 5;
@@ -227,14 +227,61 @@ impl Packet {
     }
 
     pub fn to_json(&self) -> Result<String> {
-        let time_stamp = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?;
         match &self.data {
-            Data::Bme280(data) => Ok(format!(r#"{{ "time": {:?}, "temperature": {}, "humidity": {}, "pressure": {} }}"#, time_stamp, data.temperature, data.humidity, data.pressure)),
-            Data::Bma400(data) => Ok(format!(r#"{{ "time": {:?}, "x": {}, "y": {}, "z": {} }}"#, time_stamp, data.x, data.y, data.z)),
-            Data::Mq2(data) => Ok(format!(r#"{{ "time": {:?}, "gas_type": {}, "value": {} }}"#, time_stamp, data.gas_type, data.value)),
-            Data::Gps(data) => Ok(format!(r#"{{ "time": {:?}, "status": {}, "altitude": {}, "latitude": {}, "longitude": {} }}"#, time_stamp, data.status, data.altitude, data.latitude, data.longitude)),
-            Data::Sms(data) => Ok(format!(r#"{{ "time": {:?}, "text": "{}" }}"#, time_stamp, *data)),
+            Data::Bme280(data) => Ok(format!(
+                r#""BME280": {{ "temperature": {}, "humidity": {}, "pressure": {} }}"#,
+                data.temperature as f32 / 2.0, data.humidity as f32, data.pressure as f32 + 1000.0
+            )),
+            Data::Bma400(data) => Ok(format!(
+                r#""BMA400": {{ "x": {}, "y": {}, "z": {} }}"#,
+                data.x, data.y, data.z
+            )),
+            Data::Mq2(data) => Ok(format!(
+                r#""MQ2": {{ "gas_type": {}, "value": {} }}"#,
+                data.gas_type, data.value
+            )),
+            Data::Gps(data) => Ok(format!(
+                r#""GPS": {{ "status": {}, "altitude": {}, "latitude": {}, "longitude": {} }}"#,
+                data.status, data.altitude,
+                (data.latitude as f64) / 10_000_000f64,
+                (data.longitude as f64) / 10_000_000f64
+            )),
+            Data::Sms(data) => Ok(format!(
+                r#""SMS": {{ "text": "{}" }}"#,
+                *data
+            )),
         }
+    }
+}
+
+pub struct Metadata {
+    pub snr: u8,
+    pub rssi: i16,
+}
+
+impl Metadata {
+    pub fn to_json(&self) -> Result<String> {
+        Ok(format!(
+                r#""META": {{ "snr": {}, "rssi": {} }}"#,
+                self.snr, self.rssi
+        ))
+    }
+}
+
+/// A struct to wrap a LoRa packet with additional data about
+/// SNR (signal to noise ratio)
+/// and RSSI (received signal strength indicator)
+pub struct PacketWrapper {
+    pub packet: Packet,
+    pub metadata: Metadata,
+}
+
+impl PacketWrapper {
+    pub fn to_json(&self) -> Result<String> {
+        Ok(format!(
+            r#"{{ {}, {} }}"#,
+            self.packet.to_json()?, self.metadata.to_json()?
+        ))
     }
 }
 
