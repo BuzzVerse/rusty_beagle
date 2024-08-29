@@ -1,4 +1,4 @@
-import io, os, sys, time, subprocess, csv, logging
+import os, sys, time, subprocess, csv, logging
 from datetime import datetime
 
 if len(sys.argv) != 3:
@@ -25,8 +25,8 @@ with open(csv_file, mode='w', newline='') as file:
     writer.writerow(['Packages Sent', 'Packages Received', 'CRC Errors', 'Time (s)'])
 
     # call everything needed
-    rx_process = subprocess.Popen([path_to_binary, "./beagle_configs/rx_conf.ron"], stdout=subprocess.PIPE)
-    tx_process = subprocess.Popen([path_to_binary, "./beagle_configs/tx_conf.ron"], stdout=subprocess.PIPE)
+    rx_process = subprocess.Popen([path_to_binary, "./beagle_configs/rx_conf.toml"], stdout=subprocess.PIPE)
+    tx_process = subprocess.Popen([path_to_binary, "./beagle_configs/tx_conf.toml"], stdout=subprocess.PIPE)
 
     # wait some time for packages
     time.sleep(float(time_to_run)) 

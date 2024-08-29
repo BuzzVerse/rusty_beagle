@@ -1,4 +1,4 @@
-import io, os, sys, time, subprocess, csv, logging
+import os, sys, time, subprocess, csv, logging
 from datetime import datetime
 
 bandwidths = [
@@ -59,8 +59,8 @@ with open(csv_file, mode='w', newline='') as file:
             for spreading_factor in spreading_factors:
                 # call everything needed
                 os.system(f"python3 ./make_config.py {bandwidth} {coding_rate} {spreading_factor}")
-                rx_process = subprocess.Popen([path_to_binary, "./rx_conf.ron"], stdout=subprocess.PIPE)
-                tx_process = subprocess.Popen([path_to_binary, "./tx_conf.ron"], stdout=subprocess.PIPE)
+                rx_process = subprocess.Popen([path_to_binary, "./rx_conf.toml"], stdout=subprocess.PIPE)
+                tx_process = subprocess.Popen([path_to_binary, "./tx_conf.toml"], stdout=subprocess.PIPE)
 
                 # wait some time for packages
                 time.sleep(float(time_to_run)) 
