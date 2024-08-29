@@ -83,7 +83,7 @@ impl BME280Sensor {
                         .expect("Failed to print BME280 measurements");
 
                     if mqtt_enabled {
-                        // TODO rethink version, msg_id and msg_count values
+                        // TODO rethink version, msg_id and msg_count values - see issue Bee Monitor #15 on Redmine
                         let packet = Packet {
                             version: 0,
                             id: option_device_id.expect("option_device_id shouldn't be none if MQTT is enabled"),
