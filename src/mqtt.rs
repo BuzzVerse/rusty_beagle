@@ -84,7 +84,8 @@ impl Mqtt {
                     },
                     Err(e) => {
                         match e {
-                            rumqttc::ConnectionError::Io(..) => {
+                            rumqttc::ConnectionError::Io(..) |
+                            rumqttc::ConnectionError::MqttState(rumqttc::StateError::Io(..)) => {
                                 eprintln!("MQTT: {:?}, retrying in {} s...", e, connection_timeout);
                                 error!("MQTT: {:?}, retrying in {} s...", e, connection_timeout);
                                 // retry after [connection_timeout] seconds
