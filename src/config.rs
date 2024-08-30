@@ -28,7 +28,7 @@ pub struct MQTTConfig {
     pub password: String,
     pub topic: String,
     pub device_id: u8,
-    pub connection_timeout: u64,
+    pub reconnect_interval: u64,
     pub enabled: bool,
 }
 
