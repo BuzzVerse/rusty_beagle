@@ -28,6 +28,7 @@ pub struct MQTTConfig {
     pub password: String,
     pub topic: String,
     pub device_id: u8,
+    pub reconnect_interval: u64,
     pub enabled: bool,
 }
 
@@ -162,7 +163,7 @@ mod tests {
 
     #[test]
     fn config_correct() {
-        assert!(Config::from_file("./tests/configs/conf.ron".to_string()).is_ok());
+        assert!(Config::from_file("./conf.ron".to_string()).is_ok());
     }
 
     #[test]

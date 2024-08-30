@@ -64,6 +64,7 @@ impl Mqtt {
         let mut options = MqttOptions::new(client_id, mqtt_config.ip, mqtt_config.port.parse().context("Mqtt::new")?);
         options.set_credentials(mqtt_config.login, mqtt_config.password);
         options.set_keep_alive(Duration::from_secs(5));
+        let reconnect_interval = mqtt_config.reconnect_interval;
 
         let (client, mut connection) = Client::new(options, 10);
 
@@ -82,9 +83,10 @@ impl Mqtt {
                         }
                     },
                     Err(e) => {
-                        eprintln!("{:?}", e);
-                        error!("MQTT: {:?}", e);
-                        break;
+                        eprintln!("MQTT: {:?}, retrying in {} s...", e, reconnect_interval);
+                        error!("MQTT: {:?}, retrying in {} s...", e, reconnect_interval);
+                        // retry after [reconnect_interval] seconds
+                        std::thread::sleep(Duration::from_secs(reconnect_interval));
                     }
                 }
             }

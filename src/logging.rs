@@ -15,7 +15,7 @@ pub fn start_logger() {
         Ok(writer) => {
             // Initialize the logger
             log::set_boxed_logger(Box::new(BasicLogger::new(writer)))
-                .map(|()| log::set_max_level(log::LevelFilter::Debug))
+                .map(|()| log::set_max_level(log::STATIC_MAX_LEVEL))
                 .expect("could not set logger");
         }
     }

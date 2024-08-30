@@ -6,6 +6,7 @@ Config(
         password: "verysecurepassword",
         topic: "sensors/{device_id}/data",
         device_id: 1,
+        reconnect_interval: 30,
         enabled: true,
     ),
     lora_config: LoRaConfig(
