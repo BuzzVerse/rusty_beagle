@@ -5,6 +5,7 @@ use rumqttc::{Client, Event, MqttOptions, Packet as MqttPacket, Outgoing, QoS};
 use std::sync::mpsc::Receiver;
 use crate::packet::{Packet, PacketWrapper};
 use crate::config::MQTTConfig;
+extern crate chrono;
 
 macro_rules! handle_error_continue {
     ($func:expr) => {
@@ -44,13 +45,23 @@ impl MQTTMessage {
     }
 }
 
+/// Generates a practically unique client_id
+/// using date and time, millisecond precision
+fn generate_client_id() -> String {
+    let datetime = format!("{}", chrono::offset::Local::now().format("%Y%m%d-%H%M%S%3f"));
+    format!("rustybeagle_{}", datetime)
+}
+
 pub struct Mqtt {
     client: Client,
 }
 
 impl Mqtt {
     pub fn new(mqtt_config: MQTTConfig) -> Result<Self> {
-        let mut options = MqttOptions::new("RustyBeagle", mqtt_config.ip, mqtt_config.port.parse().context("Mqtt::new")?);
+        let client_id = generate_client_id();
+        println!("MQTT: client_id: {}", client_id);
+        info!("MQTT: client_id: {}", client_id);
+        let mut options = MqttOptions::new(client_id, mqtt_config.ip, mqtt_config.port.parse().context("Mqtt::new")?);
         options.set_credentials(mqtt_config.login, mqtt_config.password);
         options.set_keep_alive(Duration::from_secs(5));
 
