@@ -15,3 +15,4 @@ serde = { version = "1.0.204", features = ["derive"] }
 spidev = "0.6.0"
 syslog = "^7.0"
 rumqttc = "0.24.0"
+chrono = "0.4.38"
