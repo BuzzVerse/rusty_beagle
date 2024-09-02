@@ -39,7 +39,7 @@ fn parse_args() -> String {
     let args: Vec<String> = env::args().collect();
 
     match args.len() {
-        1 => "./conf.ron".to_string(),
+        1 => "./conf.toml".to_string(),
         2 => args[1].to_string(),
         _ => {
             eprintln!("Wrong number of arguments!");
@@ -56,51 +56,62 @@ fn main() {
 
     let config_path = parse_args();
     let config = handle_error_exit!(Config::from_file(config_path));
-    let radio_config = config.lora_config.radio_config.clone();
-    let mqtt_config = config.mqtt_config.clone();
-    let bme280_config: BME280Config = config.bme_config.clone();
+    let option_lora_config = config.lora_config;
+    let option_mqtt_config = config.mqtt_config;
+    let option_bme_config = config.bme_config;
 
+    let mqtt_enabled;
     let option_sender;
-    let mqtt_enabled = mqtt_config.enabled;
-    let option_device_id = if mqtt_enabled { Some(mqtt_config.device_id) } else { None };
+    let option_device_id;
 
-    if mqtt_enabled {
+    if let Some(mqtt_config) = option_mqtt_config {
         let (sender, receiver) = channel::<MQTTMessage>();
         option_sender = Some(sender);
+        option_device_id = Some(mqtt_config.device_id);
         let option_receiver = Some(receiver);
 
         threads.push(thread::spawn(move || {
             let mqtt = handle_error_exit!(Mqtt::new(mqtt_config.clone()));
             mqtt.thread_run(mqtt_config, option_receiver);
         }));
+        mqtt_enabled = true;
     } else {
+        println!("[MQTT disabled]");
         option_sender = None;
+        mqtt_enabled = false;
+        option_device_id = None;
     }
 
-    if bme280_config.enabled {
+    if let Some(bme280_config) = option_bme_config {
         let option_sender = option_sender.clone();
         threads.push(thread::spawn(move || {
             let mut bme280 = handle_error_exit!(BME280Sensor::new(bme280_config.clone()));
             bme280.thread_run(bme280_config, mqtt_enabled, option_device_id, option_sender);
         }));
+    } else {
+        println!("[BME disabled]");
     }
 
-    let mut lora = match LoRa::from_config(&config.lora_config) {
-        Ok(lora) => {
-            info!("LoRa object created successfully.");
-            lora
-        }
-        Err(e) => {
-            eprintln!("When creating lora object: {:?}", e);
-            error!("When creating lora object: {e}");
-            std::process::exit(-1);
-        }
-    };
+    if let Some(lora_config) = option_lora_config {
+        let radio_config = lora_config.radio_config.clone();
+        let mut lora = match LoRa::from_config(&lora_config) {
+            Ok(lora) => {
+                info!("LoRa object created successfully.");
+                lora
+            }
+            Err(e) => {
+                eprintln!("When creating lora object: {:?}", e);
+                error!("When creating lora object: {e}");
+                std::process::exit(-1);
+            }
+        };
+
+        threads.push(thread::spawn(move || {
+            handle_error_exit!(lora.start(radio_config, option_sender));
+        }));
+    }
 
 
-    threads.push(thread::spawn(move || {
-        handle_error_exit!(lora.start(radio_config, option_sender));
-    }));
 
     for thread in threads {
         handle_error_exit!(thread.join());
