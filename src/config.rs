@@ -162,7 +162,7 @@ mod tests {
 
     #[test]
     fn config_correct() {
-        assert!(Config::from_file("./tests/configs/conf.toml".to_string()).is_ok());
+        assert!(Config::from_file("./conf.toml".to_string()).is_ok());
     }
 
     #[test]
