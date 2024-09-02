@@ -76,7 +76,7 @@ fn main() {
         }));
         mqtt_enabled = true;
     } else {
-        println!("[MQTT Disabled]");
+        println!("[MQTT disabled]");
         option_sender = None;
         mqtt_enabled = false;
         option_device_id = None;
@@ -89,7 +89,7 @@ fn main() {
             bme280.thread_run(bme280_config, mqtt_enabled, option_device_id, option_sender);
         }));
     } else {
-        println!("BME Disabled");
+        println!("[BME disabled]");
     }
 
     if let Some(lora_config) = option_lora_config {
