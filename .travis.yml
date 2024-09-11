@@ -1,4 +1,4 @@
-language: rust.yml
+language: rust
 
 sudo: required
 
