@@ -35,3 +35,18 @@ rustflags = ["-C", "target-feature=+crt-static"]
     - ```uboot_overlay_addr5=/lib/firmware/BB-SPIDEV1-00A0.dtbo```
 1. Create config for rusty_beagle, example config is available in rusty_beagle/conf.ron
 2. Run ```./rusty_beagle <path_to_config>``` 
+
+# How to build on Apple Silicon using Docker
+
+1. In docker directory run commands below
+2. Docker build
+```bash
+docker build --platform linux/amd64 --progress=plain -t rusty_beagle .
+```
+3. Docker run
+```bash
+docker run --rm -v $(pwd)/output:/output rusty_beagle
+```
+4. output of build is in the "output" directory
+
+
