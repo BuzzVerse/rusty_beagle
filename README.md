@@ -38,9 +38,15 @@ rustflags = ["-C", "target-feature=+crt-static"]
 
 # How to build on Apple Silicon using Docker
 
-1. in docker directory run below
-2. docker build --platform linux/amd64 --progress=plain -t rusty_beagle .
-3. docker run --rm -v $(pwd)/output:/output rusty_beagle
-4. output of build is on the "output" directory
+1. In docker directory run commands below
+2. Docker build
+```bash
+docker build --platform linux/amd64 --progress=plain -t rusty_beagle .
+```
+3. Docker run
+```bash
+docker run --rm -v $(pwd)/output:/output rusty_beagle
+```
+4. output of build is in the "output" directory
 
 
