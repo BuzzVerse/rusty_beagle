@@ -7,12 +7,14 @@ mod lora;
 mod mqtt;
 mod packet;
 mod version_tag;
+mod post;
 
 extern crate log;
 
 pub use crate::config::*;
 pub use crate::defines::*;
 pub use crate::logging::start_logger;
+pub use crate::post::post;
 
 use bme280::BME280Sensor;
 use log::{error, info};
@@ -52,19 +54,20 @@ fn parse_args() -> String {
 
 fn main() {
     start_logger();
-    let mut threads = Vec::new();
-
     let config_path = parse_args();
     let config = handle_error_exit!(Config::from_file(config_path));
+    let mod_state = handle_error_exit!(post(&config));
+
+    let mut threads = Vec::new();
+
     let option_lora_config = config.lora_config;
     let option_mqtt_config = config.mqtt_config;
     let option_bme_config = config.bme_config;
 
-    let mqtt_enabled;
     let option_sender;
     let option_device_id;
 
-    if let Some(mqtt_config) = option_mqtt_config {
+    if let (Some(mqtt_config), true) = (option_mqtt_config, mod_state.mqtt) {
         let (sender, receiver) = channel::<MQTTMessage>();
         option_sender = Some(sender);
         option_device_id = Some(mqtt_config.device_id);
@@ -74,25 +77,20 @@ fn main() {
             let mqtt = handle_error_exit!(Mqtt::new(mqtt_config.clone()));
             mqtt.thread_run(mqtt_config, option_receiver);
         }));
-        mqtt_enabled = true;
     } else {
-        println!("[MQTT disabled]");
         option_sender = None;
-        mqtt_enabled = false;
         option_device_id = None;
     }
 
-    if let Some(bme280_config) = option_bme_config {
+    if let (Some(bme280_config), true) = (option_bme_config, mod_state.bme280) {
         let option_sender = option_sender.clone();
         threads.push(thread::spawn(move || {
             let mut bme280 = handle_error_exit!(BME280Sensor::new(bme280_config.clone()));
-            bme280.thread_run(bme280_config, mqtt_enabled, option_device_id, option_sender);
+            bme280.thread_run(bme280_config, mod_state.mqtt, option_device_id, option_sender);
         }));
-    } else {
-        println!("[BME disabled]");
     }
 
-    if let Some(lora_config) = option_lora_config {
+    if let (Some(lora_config), true) = (option_lora_config, mod_state.lora) {
         let radio_config = lora_config.radio_config.clone();
         let mut lora = match LoRa::from_config(&lora_config) {
             Ok(lora) => {
@@ -118,3 +116,4 @@ fn main() {
     }
 
 }
+
