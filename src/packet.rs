@@ -21,6 +21,7 @@ pub enum DataType {
     BMA400 = 2,
     MQ2 = 3,
     Gps = 4,
+    Status = 5,
     Sms = 32,
 }
 
@@ -31,6 +32,7 @@ impl DataType {
             2 => Ok(Self::BMA400),
             3 => Ok(Self::MQ2),
             4 => Ok(Self::Gps),
+            5 => Ok(Self::Status),
             32 => Ok(Self::Sms),
             _ => Err(anyhow!("Invalid data type")).context("DataType::new"),
         }
@@ -43,6 +45,7 @@ pub enum Data {
     Bma400(BMA400),
     Mq2(MQ2),
     Gps(Gps),
+    Status(Status),
     Sms(String),
 }
 
@@ -73,6 +76,14 @@ pub struct Gps {
     pub latitude: i32,
     pub longitude: i32,
 }
+
+#[derive(Debug, Deserialize, Serialize, Hash)]
+pub struct Status {
+    pub status: u8,
+    pub battery: u16,
+    pub sleep: u16,
+}
+
 
 impl Data {
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
@@ -134,6 +145,20 @@ impl Data {
                     longitude: vec_to_i32(bytes, META_DATA_SIZE + 7).context("Data::from_bytes")?,
                 }))
             }
+            DataType::Status => {
+                if bytes.len() != 10 {
+                    return Err(anyhow!(
+                        "Incorrect length, was {}, should be 10",
+                        bytes.len()
+                    ))
+                    .context("Data::from_bytes");
+                }
+                Ok(Data::Status(Status {
+                    status: bytes[META_DATA_SIZE],
+                    battery: vec_to_u16(bytes, META_DATA_SIZE + 1).context("Data::from_bytes")?,
+                    sleep: vec_to_u16(bytes, META_DATA_SIZE + 3).context("Data::from_bytes")?,
+                }))
+            }
             DataType::Sms => {
                 if bytes.len() < 6 {
                     return Err(anyhow!(
@@ -170,6 +195,7 @@ impl fmt::Debug for Data {
                 "{{ status: {}, altitude: {}, latitude: {}, longitude: {} }}",
                 data.status, data.altitude, data.latitude, data.longitude
             ),
+            Data::Status(data) => write!(f, "{{ status: {}, battery: {}, sleep: {} }}", data.status, data.battery, data.sleep),
             Data::Sms(data) => write!(f, "\"{}\"", *data),
         }
     }
@@ -219,6 +245,7 @@ impl Packet {
             Data::Bma400(data) => bincode::serialize(data).context("Packet::to_bytes")?,
             Data::Mq2(data) => bincode::serialize(data).context("Packet::to_bytes")?,
             Data::Gps(data) => bincode::serialize(data).context("Packet::to_bytes")?,
+            Data::Status(data) => bincode::serialize(data).context("Packet::to_bytes")?,
             Data::Sms(data) => data.as_bytes().to_vec(),
         };
 
@@ -245,6 +272,10 @@ impl Packet {
                 data.status, data.altitude,
                 (data.latitude as f64) / 10_000_000f64,
                 (data.longitude as f64) / 10_000_000f64
+            )),
+            Data::Status(data) => Ok(format!(
+                r#""Status": {{ "status": {}, "battery": {}, "sleep": {} }}"#,
+                data.status, data.battery, data.sleep
             )),
             Data::Sms(data) => Ok(format!(
                 r#""SMS": {{ "text": "{}" }}"#,
