@@ -522,21 +522,14 @@ impl LoRa {
                     println!("--------------------------------------------------------------------------------");
                     println!();
 
-                    if crc_error {
-                        println!("+-----------+");
-                        println!("| CRC Error |");
-                        println!("+-----------+");
-                        println!();
-                    }
-
                     match Packet::new(&received_buffer) {
                         Ok(packet) => {
                             let snr = self.get_packet_snr().context("LoRa::start")?;
                             let rssi = self.get_packet_rssi().context("LoRa::start")?;
-                            println!("Received: {:#?}, SNR = {} dB, RSSI = {} dBm", packet, snr, rssi);
-                            info!("Received: {:?}, SNR = {} dB, RSSI = {} dBm", packet, snr, rssi);
 
                             if !crc_error {
+                                println!("Received: {:#?}, SNR = {} dB, RSSI = {} dBm", packet, snr, rssi);
+                                info!("Received: {:?}, SNR = {} dB, RSSI = {} dBm", packet, snr, rssi);
                                 if let Some(lora_sender) = &option_sender {
                                     let wrapped = PacketWrapper {
                                         packet,
@@ -544,6 +537,10 @@ impl LoRa {
                                     };
                                     handle_error_continue!(lora_sender.send(MQTTMessage::PacketWrapper(wrapped)));
                                 } 
+                            } else {
+                                // using ANSI escape codes for colors in terminal
+                                println!("\x1b[0;31m[CRC ERROR]\x1b[0m\nReceived: {:#?}, SNR = {} dB, RSSI = {} dBm", packet, snr, rssi);
+                                info!("[CRC ERROR] Received: {:?}, SNR = {} dB, RSSI = {} dBm", packet, snr, rssi);
                             }
                         },
                         Err(e) => {
