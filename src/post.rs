@@ -148,3 +148,9 @@ pub struct ModulesState {
     pub mqtt: bool,
     pub bme280: bool,
 }
+
+// impl ModulesState {
+//     pub fn is_ok(&self) -> bool {
+//         self.lora && self.mqtt && self.bme280
+//     }
+// }

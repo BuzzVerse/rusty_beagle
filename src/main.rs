@@ -20,6 +20,7 @@ use bme280::BME280Sensor;
 use log::{error, info};
 use lora::LoRa;
 use mqtt::{Mqtt, MQTTMessage};
+use packet::Status;
 use std::env;
 use std::thread;
 use std::sync::mpsc::channel;
@@ -31,6 +32,18 @@ macro_rules! handle_error_exit {
                 eprintln!("{:?}", e);
                 error!("{:?}", e);
                 std::process::exit(-1);
+            }
+            Ok(s) => s,
+        }
+    };
+}
+
+macro_rules! log_error {
+    ($func:expr) => {
+        match $func {
+            Err(e) => {
+                eprintln!("{:?}", e);
+                error!("{:?}", e);
             }
             Ok(s) => s,
         }
@@ -69,9 +82,16 @@ fn main() {
 
     if let (Some(mqtt_config), true) = (option_mqtt_config, mod_state.mqtt) {
         let (sender, receiver) = channel::<MQTTMessage>();
+        let post_sender = sender.clone();
         option_sender = Some(sender);
         option_device_id = Some(mqtt_config.device_id);
         let option_receiver = Some(receiver);
+
+        if let Some(device_id) = option_device_id {
+            let status = Status::from_mod_info(&mod_state, device_id);
+            let mqtt_message = MQTTMessage::Packet(status);
+            log_error!(post_sender.send(mqtt_message));
+        }
 
         threads.push(thread::spawn(move || {
             let mqtt = handle_error_exit!(Mqtt::new(mqtt_config.clone()));
@@ -81,6 +101,14 @@ fn main() {
         option_sender = None;
         option_device_id = None;
     }
+
+    // if !mod_state.is_ok() {
+        // if let (Some(sender), Some(device_id)) = (option_sender.clone(), option_device_id) {
+        //     let status = Status::from_mod_info(&mod_state, device_id);
+        //     let mqtt_message = MQTTMessage::Packet(status);
+        //     log_error!(sender.send(mqtt_message));
+        // }
+    // }
 
     if let (Some(bme280_config), true) = (option_bme_config, mod_state.bme280) {
         let option_sender = option_sender.clone();

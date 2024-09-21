@@ -1,5 +1,5 @@
 use core::fmt;
-use crate::conversions::*;
+use crate::{conversions::*, post::ModulesState};
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
 use std::hash::Hash;
@@ -82,6 +82,58 @@ pub struct Status {
     pub status: u8,
     pub battery: u16,
     pub sleep: u16,
+}
+
+impl Status {
+    pub fn from_mod_info(mod_info: &ModulesState, id: u8) -> Packet {
+        let mut status = Self::set_mqtt_status(0, mod_info.mqtt);
+        status = Self::set_lora_status(status, mod_info.lora);
+        status = Self::set_bme_status(status, mod_info.bme280);
+
+        let version = 0;
+        let msg_id = 1;
+        let msg_count = 1;
+        let data_type = DataType::Status;
+        let data = Data::Status(Status {
+            status,
+            battery: 0,
+            sleep: 0,
+        });
+
+        Packet { version, id, msg_id, msg_count, data_type, data }
+    }
+
+    fn set_lora_status(status: u8, lora_status: bool) -> u8 {
+        const LORA_STATUS_BIT: u8 = 1 << 4;
+
+        if !lora_status {
+            return status | LORA_STATUS_BIT
+        } 
+
+        status
+    }
+
+    fn set_mqtt_status(status: u8, mqtt_status: bool) -> u8 {
+        const MQTT_STATUS_BIT: u8 = 1 << 2;
+        
+        if !mqtt_status {
+            return status | MQTT_STATUS_BIT
+        } 
+
+        status
+    }
+
+    fn set_bme_status(status: u8, bme_status: bool) -> u8 {
+        const SENSOR_ID_BIT: u8 = 1 << 5;
+        const SENSOR_STATUS_BIT: u8 = 1 << 7;
+
+        if !bme_status {
+            let temp_status = status | SENSOR_ID_BIT; 
+            return temp_status | SENSOR_STATUS_BIT
+        } 
+
+        status
+    }
 }
 
 
@@ -184,7 +236,11 @@ impl fmt::Debug for Data {
                 "{{ temperature: {}, humidity: {}, pressure: {} }}",
                 data.temperature, data.humidity, data.pressure
             ),
-            Data::Bma400(data) => write!(f, "{{ x: {}, y: {}, z: {} }}", data.x, data.y, data.z),
+            Data::Bma400(data) => write!(
+                f,
+                "{{ x: {}, y: {}, z: {} }}",
+                data.x, data.y, data.z
+            ),
             Data::Mq2(data) => write!(
                 f,
                 "{{ gas_type: {}, value: {} }}",
@@ -195,7 +251,11 @@ impl fmt::Debug for Data {
                 "{{ status: {}, altitude: {}, latitude: {}, longitude: {} }}",
                 data.status, data.altitude, data.latitude, data.longitude
             ),
-            Data::Status(data) => write!(f, "{{ status: {}, battery: {}, sleep: {} }}", data.status, data.battery, data.sleep),
+            Data::Status(data) => write!(
+                f, 
+                "{{ status: {}, battery: {}, sleep: {} }}",
+                data.status, data.battery, data.sleep
+            ),
             Data::Sms(data) => write!(f, "\"{}\"", *data),
         }
     }
@@ -274,7 +334,7 @@ impl Packet {
                 (data.longitude as f64) / 10_000_000f64
             )),
             Data::Status(data) => Ok(format!(
-                r#""Status": {{ "status": {}, "battery": {}, "sleep": {} }}"#,
+                r#""STATUS": {{ "status": {}, "battery": {}, "sleep": {} }}"#,
                 data.status, data.battery, data.sleep
             )),
             Data::Sms(data) => Ok(format!(
