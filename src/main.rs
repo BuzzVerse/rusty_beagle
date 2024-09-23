@@ -102,14 +102,6 @@ fn main() {
         option_device_id = None;
     }
 
-    // if !mod_state.is_ok() {
-        // if let (Some(sender), Some(device_id)) = (option_sender.clone(), option_device_id) {
-        //     let status = Status::from_mod_info(&mod_state, device_id);
-        //     let mqtt_message = MQTTMessage::Packet(status);
-        //     log_error!(sender.send(mqtt_message));
-        // }
-    // }
-
     if let (Some(bme280_config), true) = (option_bme_config, mod_state.bme280) {
         let option_sender = option_sender.clone();
         threads.push(thread::spawn(move || {
@@ -136,8 +128,6 @@ fn main() {
             handle_error_exit!(lora.start(radio_config, option_sender));
         }));
     }
-
-
 
     for thread in threads {
         handle_error_exit!(thread.join());
