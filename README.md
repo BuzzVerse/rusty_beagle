@@ -24,8 +24,8 @@ rustflags = ["-C", "target-feature=+crt-static"]
 1. Connect LoRa GND & 3.3V pins to corresponding pins on BBB
 1. Connect LoRa module to BBB via SPI
 1. Connect LoRa RST pin to any GPIO pin on BBB
-2. Connect LoRa DIO0 pin to any GPIO pin on BBB
-3. Include chosen SPIDEV and GPIO pins in a config file
+1. Connect LoRa DIO0 pin to any GPIO pin on BBB
+1. Include chosen SPIDEV and GPIO pins in a config file
 
 # Running on BeagleBone Black
 1. Ensure that HDMI is disabled: in /boot/uEnv.txt uncomment the line:
@@ -34,7 +34,9 @@ rustflags = ["-C", "target-feature=+crt-static"]
     - ```uboot_overlay_addr4=/lib/firmware/BB-SPIDEV0-00A0.dtbo```
     - ```uboot_overlay_addr5=/lib/firmware/BB-SPIDEV1-00A0.dtbo```
 1. Create config for rusty_beagle, example config is available in rusty_beagle/conf.ron
-2. Run ```./rusty_beagle <path_to_config>``` 
+1. Run ```./rusty_beagle <path_to_config>``` 
+
+> In case of permission errors during POST network connection check, change the capabilities of rusty_beagle binary by running `sudo setcap cap_net_raw+ep [path/to/rusty_beagle]`
 
 # How to build on Apple Silicon using Docker
 
@@ -61,7 +63,6 @@ docker run --rm -v $(pwd)/output:/output rusty_beagle
             - SUBSYSTEM=="spidev", GROUP="spidev", MODE="0660"
         - sudo udevadm control --reload-rules
         - sudo udevadm trigger
-    - in case of trouble with permission errors during POST network connection check, run `sudo setcap cap_net_raw+ep /home/debian/rusty_beagle`
 1. Run `systemctl daemon-reload` to make systemd recognize the .service file
 1. Manage using systemctl
     - `systemctl [start\stop\restart\status] rusty-beagled`
