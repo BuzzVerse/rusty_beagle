@@ -1,0 +1,16 @@
+Description=Rusty Beagle daemon
+Documentation=https://github.com/BuzzVerse/rusty_beagle
+After=journald.service rsyslog.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=debian
+Restart=always
+RestartSec=10
+ExecStart=/home/debian/rusty_beagle /home/debian/conf.ron
+StandardOutput=null
+StandardError=null
+
+[Install]
+WantedBy=multi-user.target
