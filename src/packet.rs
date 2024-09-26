@@ -380,6 +380,7 @@ impl PacketWrapper {
 mod tests {
     use super::*;
     use std::hash::{DefaultHasher, Hasher};
+    use crate::post::ModulesState;
 
     fn calculate_hash<T: Hash>(t: &T) -> u64 {
         let mut s = DefaultHasher::new();
@@ -680,6 +681,159 @@ mod tests {
     fn deserialize_gps_packet_too_short() {
         let bytes: Vec<u8> = vec![0x33, 0x22, 0x11];
         assert!(Packet::new(&bytes).is_err());
+    }
+
+    #[test]
+    fn serialize_status_correct() {
+        let packet = Packet {
+            version: 0x33,
+            id: 0x22,
+            msg_id: 0x11,
+            msg_count: 0x00,
+            data_type: DataType::Status,
+            data: Data::Status(Status {
+                status: u8::MAX,
+                battery: u16::MAX,
+                sleep: u16::MAX,
+            }),
+        };
+
+        let expected_data: Vec<u8> = vec![
+            0x33, 0x22, 0x11, 0x00, 0x05, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+        ];
+        let serialized_packet = packet.to_bytes().unwrap();
+
+        assert_eq!(serialized_packet, expected_data);
+    }
+
+    #[test]
+    fn deserialize_status_correct() {
+        let bytes: Vec<u8> = vec![
+            0x33, 0x22, 0x11, 0x00, 0x05, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+        ];
+
+        let expected_packet = Packet {
+            version: 0x33,
+            id: 0x22,
+            msg_id: 0x11,
+            msg_count: 0x00,
+            data_type: DataType::Status,
+            data: Data::Status(Status {
+                status: u8::MAX,
+                battery: u16::MAX,
+                sleep: u16::MAX,
+            }),
+        };
+
+        let deserialized_data = Packet::new(&bytes).unwrap();
+
+        assert_eq!(
+            calculate_hash(&deserialized_data),
+            calculate_hash(&expected_packet)
+        );
+    }
+
+    #[test]
+    fn deserialize_status_data_too_short() {
+        let bytes: Vec<u8> = vec![
+            0x33, 0x22, 0x11, 0x00, 0x05, 0xFF, 0xFF, 0xFF, 0xFF,
+        ];
+        assert!(Packet::new(&bytes).is_err());
+    }
+
+    #[test]
+    fn deserialize_status_packet_too_long() {
+        let bytes: Vec<u8> = vec![
+            0x33, 0x22, 0x11, 0x00, 0x05, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+            0xFF, 0xFF, 0xFF,
+        ];
+        assert!(Packet::new(&bytes).is_err());
+    }
+
+    #[test]
+    fn deserialize_status_packet_too_short() {
+        let bytes: Vec<u8> = vec![0x33, 0x22, 0x11];
+        assert!(Packet::new(&bytes).is_err());
+    }
+
+    #[test]
+    fn from_mod_info_all_true() {
+        let mod_info = ModulesState { lora: true, mqtt: true, bme280: true };
+
+        let result = Status::from_mod_info(&mod_info, 255);
+        if let Data::Status(data) = result.data {
+            assert_eq!((0u8, 0u16, 0u16), (data.status, data.battery, data.sleep));
+        }
+    }
+
+    #[test]
+    fn from_mod_info_bme_false() {
+        let mod_info = ModulesState { lora: true, mqtt: true, bme280: false };
+
+        let result = Status::from_mod_info(&mod_info, 255);
+        if let Data::Status(data) = result.data {
+            assert_eq!((160u8, 0u16, 0u16), (data.status, data.battery, data.sleep));
+        }
+    }
+
+    #[test]
+    fn from_mod_info_mqtt_false() {
+        let mod_info = ModulesState { lora: true, mqtt: false, bme280: true };
+
+        let result = Status::from_mod_info(&mod_info, 255);
+        if let Data::Status(data) = result.data {
+            assert_eq!((4u8, 0u16, 0u16), (data.status, data.battery, data.sleep));
+        }
+    }
+
+    #[test]
+    fn from_mod_info_lora_false() {
+        let mod_info = ModulesState { lora: false, mqtt: true, bme280: true };
+
+        let result = Status::from_mod_info(&mod_info, 255);
+        if let Data::Status(data) = result.data {
+            assert_eq!((16u8, 0u16, 0u16), (data.status, data.battery, data.sleep));
+        }
+    }
+
+    #[test]
+    fn from_mod_info_only_mqtt_true() {
+        let mod_info = ModulesState { lora: false, mqtt: true, bme280: false };
+
+        let result = Status::from_mod_info(&mod_info, 255);
+        if let Data::Status(data) = result.data {
+            assert_eq!((176u8, 0u16, 0u16), (data.status, data.battery, data.sleep));
+        }
+    }
+
+    #[test]
+    fn from_mod_info_only_lora_true() {
+        let mod_info = ModulesState { lora: true, mqtt: false, bme280: false };
+
+        let result = Status::from_mod_info(&mod_info, 255);
+        if let Data::Status(data) = result.data {
+            assert_eq!((164u8, 0u16, 0u16), (data.status, data.battery, data.sleep));
+        }
+    }
+
+    #[test]
+    fn from_mod_info_only_bme_true() {
+        let mod_info = ModulesState { lora: false, mqtt: false, bme280: true };
+
+        let result = Status::from_mod_info(&mod_info, 255);
+        if let Data::Status(data) = result.data {
+            assert_eq!((20u8, 0u16, 0u16), (data.status, data.battery, data.sleep));
+        }
+    }
+
+    #[test]
+    fn from_mod_info_all_false() {
+        let mod_info = ModulesState { lora: false, mqtt: false, bme280: false };
+
+        let result = Status::from_mod_info(&mod_info, 255);
+        if let Data::Status(data) = result.data {
+            assert_eq!((180u8, 0u16, 0u16), (data.status, data.battery, data.sleep));
+        }
     }
 
     #[test]
