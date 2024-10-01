@@ -1,5 +1,5 @@
 use core::fmt;
-use crate::conversions::*;
+use crate::{conversions::*, post::ModulesState};
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
 use std::hash::Hash;
@@ -21,6 +21,7 @@ pub enum DataType {
     BMA400 = 2,
     MQ2 = 3,
     Gps = 4,
+    Status = 5,
     Sms = 32,
 }
 
@@ -31,6 +32,7 @@ impl DataType {
             2 => Ok(Self::BMA400),
             3 => Ok(Self::MQ2),
             4 => Ok(Self::Gps),
+            5 => Ok(Self::Status),
             32 => Ok(Self::Sms),
             _ => Err(anyhow!("Invalid data type")).context("DataType::new"),
         }
@@ -43,6 +45,7 @@ pub enum Data {
     Bma400(BMA400),
     Mq2(MQ2),
     Gps(Gps),
+    Status(Status),
     Sms(String),
 }
 
@@ -73,6 +76,66 @@ pub struct Gps {
     pub latitude: i32,
     pub longitude: i32,
 }
+
+#[derive(Debug, Deserialize, Serialize, Hash)]
+pub struct Status {
+    pub status: u8,
+    pub battery: u16,
+    pub sleep: u16,
+}
+
+impl Status {
+    pub fn from_mod_info(mod_info: &ModulesState, id: u8) -> Packet {
+        let mut status = Self::set_mqtt_status(0, mod_info.mqtt);
+        status = Self::set_lora_status(status, mod_info.lora);
+        status = Self::set_bme_status(status, mod_info.bme280);
+
+        let version = 0;
+        let msg_id = 1;
+        let msg_count = 1;
+        let data_type = DataType::Status;
+        let data = Data::Status(Status {
+            status,
+            battery: 0,
+            sleep: 0,
+        });
+
+        Packet { version, id, msg_id, msg_count, data_type, data }
+    }
+
+    fn set_lora_status(status: u8, lora_status: bool) -> u8 {
+        const LORA_STATUS_BIT: u8 = 1 << 4;
+
+        if !lora_status {
+            return status | LORA_STATUS_BIT
+        } 
+
+        status
+    }
+
+    fn set_mqtt_status(status: u8, mqtt_status: bool) -> u8 {
+        const MQTT_STATUS_BIT: u8 = 1 << 2;
+        
+        if !mqtt_status {
+            return status | MQTT_STATUS_BIT
+        } 
+
+        status
+    }
+
+    fn set_bme_status(status: u8, bme_status: bool) -> u8 {
+        const SENSOR_ID_BIT: u8 = 1 << 5;
+        const SENSOR_STATUS_BIT: u8 = 1 << 7;
+
+        if !bme_status {
+            let temp_status = status | SENSOR_ID_BIT; 
+            return temp_status | SENSOR_STATUS_BIT
+        } 
+
+        status
+    }
+}
+
 
 impl Data {
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
@@ -134,6 +197,20 @@ impl Data {
                     longitude: vec_to_i32(bytes, META_DATA_SIZE + 7).context("Data::from_bytes")?,
                 }))
             }
+            DataType::Status => {
+                if bytes.len() != 10 {
+                    return Err(anyhow!(
+                        "Incorrect length, was {}, should be 10",
+                        bytes.len()
+                    ))
+                    .context("Data::from_bytes");
+                }
+                Ok(Data::Status(Status {
+                    status: bytes[META_DATA_SIZE],
+                    battery: vec_to_u16(bytes, META_DATA_SIZE + 1).context("Data::from_bytes")?,
+                    sleep: vec_to_u16(bytes, META_DATA_SIZE + 3).context("Data::from_bytes")?,
+                }))
+            }
             DataType::Sms => {
                 if bytes.len() < 6 {
                     return Err(anyhow!(
@@ -159,7 +236,11 @@ impl fmt::Debug for Data {
                 "{{ temperature: {}, humidity: {}, pressure: {} }}",
                 data.temperature, data.humidity, data.pressure
             ),
-            Data::Bma400(data) => write!(f, "{{ x: {}, y: {}, z: {} }}", data.x, data.y, data.z),
+            Data::Bma400(data) => write!(
+                f,
+                "{{ x: {}, y: {}, z: {} }}",
+                data.x, data.y, data.z
+            ),
             Data::Mq2(data) => write!(
                 f,
                 "{{ gas_type: {}, value: {} }}",
@@ -169,6 +250,11 @@ impl fmt::Debug for Data {
                 f,
                 "{{ status: {}, altitude: {}, latitude: {}, longitude: {} }}",
                 data.status, data.altitude, data.latitude, data.longitude
+            ),
+            Data::Status(data) => write!(
+                f, 
+                "{{ status: {}, battery: {}, sleep: {} }}",
+                data.status, data.battery, data.sleep
             ),
             Data::Sms(data) => write!(f, "\"{}\"", *data),
         }
@@ -219,6 +305,7 @@ impl Packet {
             Data::Bma400(data) => bincode::serialize(data).context("Packet::to_bytes")?,
             Data::Mq2(data) => bincode::serialize(data).context("Packet::to_bytes")?,
             Data::Gps(data) => bincode::serialize(data).context("Packet::to_bytes")?,
+            Data::Status(data) => bincode::serialize(data).context("Packet::to_bytes")?,
             Data::Sms(data) => data.as_bytes().to_vec(),
         };
 
@@ -245,6 +332,10 @@ impl Packet {
                 data.status, data.altitude,
                 (data.latitude as f64) / 10_000_000f64,
                 (data.longitude as f64) / 10_000_000f64
+            )),
+            Data::Status(data) => Ok(format!(
+                r#""STATUS": {{ "status": {}, "battery": {}, "sleep": {} }}"#,
+                data.status, data.battery, data.sleep
             )),
             Data::Sms(data) => Ok(format!(
                 r#""SMS": {{ "text": "{}" }}"#,
@@ -289,6 +380,7 @@ impl PacketWrapper {
 mod tests {
     use super::*;
     use std::hash::{DefaultHasher, Hasher};
+    use crate::post::ModulesState;
 
     fn calculate_hash<T: Hash>(t: &T) -> u64 {
         let mut s = DefaultHasher::new();
@@ -589,6 +681,159 @@ mod tests {
     fn deserialize_gps_packet_too_short() {
         let bytes: Vec<u8> = vec![0x33, 0x22, 0x11];
         assert!(Packet::new(&bytes).is_err());
+    }
+
+    #[test]
+    fn serialize_status_correct() {
+        let packet = Packet {
+            version: 0x33,
+            id: 0x22,
+            msg_id: 0x11,
+            msg_count: 0x00,
+            data_type: DataType::Status,
+            data: Data::Status(Status {
+                status: u8::MAX,
+                battery: u16::MAX,
+                sleep: u16::MAX,
+            }),
+        };
+
+        let expected_data: Vec<u8> = vec![
+            0x33, 0x22, 0x11, 0x00, 0x05, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+        ];
+        let serialized_packet = packet.to_bytes().unwrap();
+
+        assert_eq!(serialized_packet, expected_data);
+    }
+
+    #[test]
+    fn deserialize_status_correct() {
+        let bytes: Vec<u8> = vec![
+            0x33, 0x22, 0x11, 0x00, 0x05, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+        ];
+
+        let expected_packet = Packet {
+            version: 0x33,
+            id: 0x22,
+            msg_id: 0x11,
+            msg_count: 0x00,
+            data_type: DataType::Status,
+            data: Data::Status(Status {
+                status: u8::MAX,
+                battery: u16::MAX,
+                sleep: u16::MAX,
+            }),
+        };
+
+        let deserialized_data = Packet::new(&bytes).unwrap();
+
+        assert_eq!(
+            calculate_hash(&deserialized_data),
+            calculate_hash(&expected_packet)
+        );
+    }
+
+    #[test]
+    fn deserialize_status_data_too_short() {
+        let bytes: Vec<u8> = vec![
+            0x33, 0x22, 0x11, 0x00, 0x05, 0xFF, 0xFF, 0xFF, 0xFF,
+        ];
+        assert!(Packet::new(&bytes).is_err());
+    }
+
+    #[test]
+    fn deserialize_status_packet_too_long() {
+        let bytes: Vec<u8> = vec![
+            0x33, 0x22, 0x11, 0x00, 0x05, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+            0xFF, 0xFF, 0xFF,
+        ];
+        assert!(Packet::new(&bytes).is_err());
+    }
+
+    #[test]
+    fn deserialize_status_packet_too_short() {
+        let bytes: Vec<u8> = vec![0x33, 0x22, 0x11];
+        assert!(Packet::new(&bytes).is_err());
+    }
+
+    #[test]
+    fn from_mod_info_all_true() {
+        let mod_info = ModulesState { lora: true, mqtt: true, bme280: true };
+
+        let result = Status::from_mod_info(&mod_info, 255);
+        if let Data::Status(data) = result.data {
+            assert_eq!((0u8, 0u16, 0u16), (data.status, data.battery, data.sleep));
+        }
+    }
+
+    #[test]
+    fn from_mod_info_bme_false() {
+        let mod_info = ModulesState { lora: true, mqtt: true, bme280: false };
+
+        let result = Status::from_mod_info(&mod_info, 255);
+        if let Data::Status(data) = result.data {
+            assert_eq!((160u8, 0u16, 0u16), (data.status, data.battery, data.sleep));
+        }
+    }
+
+    #[test]
+    fn from_mod_info_mqtt_false() {
+        let mod_info = ModulesState { lora: true, mqtt: false, bme280: true };
+
+        let result = Status::from_mod_info(&mod_info, 255);
+        if let Data::Status(data) = result.data {
+            assert_eq!((4u8, 0u16, 0u16), (data.status, data.battery, data.sleep));
+        }
+    }
+
+    #[test]
+    fn from_mod_info_lora_false() {
+        let mod_info = ModulesState { lora: false, mqtt: true, bme280: true };
+
+        let result = Status::from_mod_info(&mod_info, 255);
+        if let Data::Status(data) = result.data {
+            assert_eq!((16u8, 0u16, 0u16), (data.status, data.battery, data.sleep));
+        }
+    }
+
+    #[test]
+    fn from_mod_info_only_mqtt_true() {
+        let mod_info = ModulesState { lora: false, mqtt: true, bme280: false };
+
+        let result = Status::from_mod_info(&mod_info, 255);
+        if let Data::Status(data) = result.data {
+            assert_eq!((176u8, 0u16, 0u16), (data.status, data.battery, data.sleep));
+        }
+    }
+
+    #[test]
+    fn from_mod_info_only_lora_true() {
+        let mod_info = ModulesState { lora: true, mqtt: false, bme280: false };
+
+        let result = Status::from_mod_info(&mod_info, 255);
+        if let Data::Status(data) = result.data {
+            assert_eq!((164u8, 0u16, 0u16), (data.status, data.battery, data.sleep));
+        }
+    }
+
+    #[test]
+    fn from_mod_info_only_bme_true() {
+        let mod_info = ModulesState { lora: false, mqtt: false, bme280: true };
+
+        let result = Status::from_mod_info(&mod_info, 255);
+        if let Data::Status(data) = result.data {
+            assert_eq!((20u8, 0u16, 0u16), (data.status, data.battery, data.sleep));
+        }
+    }
+
+    #[test]
+    fn from_mod_info_all_false() {
+        let mod_info = ModulesState { lora: false, mqtt: false, bme280: false };
+
+        let result = Status::from_mod_info(&mod_info, 255);
+        if let Data::Status(data) = result.data {
+            assert_eq!((180u8, 0u16, 0u16), (data.status, data.battery, data.sleep));
+        }
     }
 
     #[test]
