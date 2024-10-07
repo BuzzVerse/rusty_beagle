@@ -575,7 +575,7 @@ impl LoRa {
                         data: Data::Bme280(BME280 {
                             temperature: (dummy_temperature * 2.0).round() as u8,
                             humidity: dummy_humidity.round() as u8,
-                            pressure: ((dummy_pressure - 1000.0).round() as i8) as u8,
+                            pressure: (dummy_pressure - 1000.0).round() as i8 as u8,
                         }),
                     };
                     self.send_packet(packet.to_bytes()?).context("LoRa::start")?;

@@ -234,7 +234,7 @@ impl fmt::Debug for Data {
             Data::Bme280(data) => write!(
                 f,
                 "{{ temperature: {}, humidity: {}, pressure: {} }}",
-                data.temperature, data.humidity, data.pressure
+                data.temperature as f32 / 2.0, data.humidity as f32, data.pressure as i8 as f32 + 1000.0
             ),
             Data::Bma400(data) => write!(
                 f,
