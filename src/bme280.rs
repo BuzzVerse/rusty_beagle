@@ -66,6 +66,11 @@ impl BME280Sensor {
         let pressure = (data.pressure as i8 as f32 + 1000.0) * 100.0;
         let humidity = data.humidity as f32;
 
+        println!("BME280 Sensor Measurements:");
+        println!("Temperature: {:.1} °C", temperature);
+        println!("Pressure:    {:.1} hPa", pressure / 100.0);
+        println!("Humidity:    {:.1} %", humidity);
+
         info!("BME280 Sensor Measurements:");
         info!("Temperature: {:.1} °C", temperature);
         info!("Pressure:    {:.1} hPa", pressure / 100.0);
