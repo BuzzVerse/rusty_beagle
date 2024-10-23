@@ -563,7 +563,7 @@ impl LoRa {
 
                     self.standby_mode().context("LoRa::start")?;
 
-                    let dummy_temperature: f32 = 23.5;
+                    let dummy_temperature: f32 = -3.2;
                     let dummy_humidity: f32 = 45.6;
                     let dummy_pressure: f32 = 996.6;
                     let packet = Packet {
@@ -573,7 +573,7 @@ impl LoRa {
                         msg_count: 0x00,
                         data_type: DataType::BME280,
                         data: Data::Bme280(BME280 {
-                            temperature: (dummy_temperature * 2.0).round() as u8,
+                            temperature: (dummy_temperature * 2.0).round() as i8 as u8,
                             humidity: dummy_humidity.round() as u8,
                             pressure: (dummy_pressure - 1000.0).round() as i8 as u8,
                         }),

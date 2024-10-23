@@ -49,8 +49,8 @@ impl BME280Sensor {
             .measure(&mut self.delay)
             .map_err(|e| anyhow::anyhow!("Failed to read BME280 sensor: {:?}", e))?;
 
-        let temperature = (measurements.temperature * 2.0).round() as u8;
-        // cast pressure to i8 (two's complement), then fit into u8 to send through LoRa
+        // cast pressure & temperature to i8 (two's complement), then fit into u8 to send through LoRa
+        let temperature = (measurements.temperature * 2.0).round() as i8 as u8;
         let pressure = ((measurements.pressure / 100.0) - 1000.0).round() as i8 as u8;
         let humidity = measurements.humidity.round() as u8;
     
@@ -62,9 +62,14 @@ impl BME280Sensor {
     }
 
     pub fn print(&self, data: &PacketBME280) -> Result<()> {
-        let temperature = data.temperature as f32 / 2.0;
+        let temperature = data.temperature as i8 as f32 / 2.0;
         let pressure = (data.pressure as i8 as f32 + 1000.0) * 100.0;
         let humidity = data.humidity as f32;
+
+        println!("BME280 Sensor Measurements:");
+        println!("Temperature: {:.1} °C", temperature);
+        println!("Pressure:    {:.1} hPa", pressure / 100.0);
+        println!("Humidity:    {:.1} %", humidity);
 
         info!("BME280 Sensor Measurements:");
         info!("Temperature: {:.1} °C", temperature);
