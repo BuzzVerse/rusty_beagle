@@ -4,10 +4,11 @@ mod conversions;
 mod defines;
 mod logging;
 mod lora;
+mod lora_trait;
 mod mqtt;
 mod packet;
-mod version_tag;
 mod post;
+mod version_tag;
 
 extern crate log;
 
@@ -19,11 +20,11 @@ pub use crate::post::post;
 use bme280::BME280Sensor;
 use log::{error, info};
 use lora::LoRa;
-use mqtt::{Mqtt, MQTTMessage};
+use mqtt::{MQTTMessage, Mqtt};
 use packet::Status;
 use std::env;
-use std::thread;
 use std::sync::mpsc::channel;
+use std::thread;
 
 macro_rules! handle_error_exit {
     ($func:expr) => {
@@ -106,7 +107,12 @@ fn main() {
         let option_sender = option_sender.clone();
         threads.push(thread::spawn(move || {
             let mut bme280 = handle_error_exit!(BME280Sensor::new(bme280_config.clone()));
-            bme280.thread_run(bme280_config, mod_state.mqtt, option_device_id, option_sender);
+            bme280.thread_run(
+                bme280_config,
+                mod_state.mqtt,
+                option_device_id,
+                option_sender,
+            );
         }));
     }
 
@@ -132,6 +138,4 @@ fn main() {
     for thread in threads {
         handle_error_exit!(thread.join());
     }
-
 }
-
