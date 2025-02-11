@@ -1,4 +1,4 @@
-pub use crate::lora_trait::LoRa;
+pub use crate::lora::LoRa;
 
 use core::time;
 
@@ -6,9 +6,8 @@ use crate::config::RadioConfig;
 use crate::defines::*;
 use crate::mqtt::MQTTMessage;
 use crate::packet::{Data, DataType, Metadata, Packet, PacketWrapper, BME280};
-use crate::version_tag::{print_rusty_beagle, print_version_tag};
 use crate::{GPIOPin, GPIOPinNumber, LoRaConfig, Mode};
-use anyhow::{anyhow, Context, Error, Result};
+use anyhow::{anyhow, Context, Result};
 use gpiod::{Chip, Edge, EdgeDetect, Input, Lines, Options, Output};
 use log::{error, info};
 use spidev::{SpiModeFlags, Spidev, SpidevOptions, SpidevTransfer};
@@ -27,6 +26,7 @@ macro_rules! handle_error_continue {
     };
 }
 
+#[cfg(target_arch = "arm")]
 pub struct SX1278 {
     spidev: Spidev,
     reset_pin: Lines<Output>,
@@ -34,9 +34,45 @@ pub struct SX1278 {
     pub mode: Mode,
 }
 
+#[cfg(target_arch = "x86_64")]
+pub struct SX1278 {
+    mock_registers: [u8; 112],
+    dio0_pin: MockGPIO,
+    pub mode: Mode,
+}
+
+#[cfg(target_arch = "x86_64")]
+pub struct MockGPIO {}
+
+#[cfg(target_arch = "x86_64")]
+impl MockGPIO {
+    fn read_event(&mut self) -> Result<MockEvent> {
+        let event = MockEvent { edge: Edge::Rising };
+        Ok(event)
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+pub struct MockEvent {
+    edge: Edge,
+}
+
 impl SX1278 {
     pub fn sleep(ms: u64) {
         std::thread::sleep(time::Duration::from_millis(ms));
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    pub fn from_config(_lora_config: &LoRaConfig) -> Result<Self> {
+        let mock_registers = [1; 112];
+        let dio0_pin = MockGPIO {};
+        let mode = _lora_config.mode.clone();
+
+        Ok(Self {
+            mock_registers,
+            dio0_pin,
+            mode,
+        })
     }
 
     #[cfg(target_arch = "arm")]
@@ -109,6 +145,33 @@ impl SX1278 {
 }
 
 impl LoRa for SX1278 {
+    #[cfg(target_arch = "x86_64")]
+    fn spi_read_register(&mut self, register: LoRaRegister, value: &mut u8) -> Result<()> {
+        *value = self.mock_registers[register as usize];
+        Ok(())
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    fn spi_write_register(&mut self, register: LoRaRegister, value: u8) -> Result<()> {
+        self.mock_registers[register as usize] = value;
+        Ok(())
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    fn reset(&mut self) -> Result<()> {
+        self.mock_registers = [1; 112];
+
+        // wait for 10 ms before using the chip
+        Self::sleep(10);
+
+        Ok(())
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    fn config_dio(&mut self) -> Result<()> {
+        Ok(())
+    }
+
     #[cfg(target_arch = "arm")]
     fn spi_read_register(&mut self, register: LoRaRegister, value: &mut u8) -> Result<()> {
         let tx_buf: [u8; 2] = [register as u8 | SPIIO::SPI_READ as u8, 0x00];
@@ -630,5 +693,133 @@ impl LoRa for SX1278 {
 
     fn rt_transmit(&mut self) -> Result<()> {
         todo!("Add later");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::*;
+
+    macro_rules! handle_error {
+        ($func:expr) => {
+            match $func {
+                Err(e) => {
+                    eprintln!("{:?}", e);
+                    error!("{:?}", e);
+                    std::process::exit(-1);
+                }
+                Ok(s) => s,
+            }
+        };
+    }
+
+    #[test]
+    fn spi_read_register_correct() {
+        let config = handle_error!(Config::from_file("./conf.toml".to_string()));
+        let mut lora: Box<dyn LoRa> = match SX1278::from_config(&config.lora_config.unwrap()) {
+            Ok(lora) => Box::new(lora),
+            Err(e) => {
+                error!("When creating lora object: {e}");
+                std::process::exit(-1);
+            }
+        };
+
+        let mut value: u8 = 0x00;
+        assert!(lora
+            .spi_read_register(LoRaRegister::PAYLOAD_LENGTH, &mut value)
+            .is_ok());
+    }
+
+    #[test]
+    fn spi_write_register_correct() {
+        let config = handle_error!(Config::from_file("./conf.toml".to_string()));
+        let mut lora: Box<dyn LoRa> = match SX1278::from_config(&config.lora_config.unwrap()) {
+            Ok(lora) => Box::new(lora),
+            Err(e) => {
+                error!("When creating lora object: {e}");
+                std::process::exit(-1);
+            }
+        };
+
+        let value: u8 = 0xFF;
+        assert!(lora
+            .spi_write_register(LoRaRegister::PAYLOAD_LENGTH, value)
+            .is_ok());
+    }
+
+    #[test]
+    fn standby_mode_correct() {
+        let config = handle_error!(Config::from_file("./conf.toml".to_string()));
+        let mut lora: Box<dyn LoRa> = match SX1278::from_config(&config.lora_config.unwrap()) {
+            Ok(lora) => Box::new(lora),
+            Err(e) => {
+                error!("When creating lora object: {e}");
+                std::process::exit(-1);
+            }
+        };
+
+        handle_error!(lora.standby_mode());
+
+        let mut mode: u8 = 0x00;
+        handle_error!(lora.spi_read_register(LoRaRegister::OP_MODE, &mut mode));
+        assert_eq!((LoRaMode::LONG_RANGE as u8 | LoRaMode::STDBY as u8), mode);
+    }
+
+    #[test]
+    fn sleep_mode_correct() {
+        let config = handle_error!(Config::from_file("./conf.toml".to_string()));
+        let mut lora: Box<dyn LoRa> = match SX1278::from_config(&config.lora_config.unwrap()) {
+            Ok(lora) => Box::new(lora),
+            Err(e) => {
+                error!("When creating lora object: {e}");
+                std::process::exit(-1);
+            }
+        };
+
+        handle_error!(lora.sleep_mode());
+
+        let mut mode: u8 = 0x00;
+        handle_error!(lora.spi_read_register(LoRaRegister::OP_MODE, &mut mode));
+        assert_eq!((LoRaMode::LONG_RANGE as u8 | LoRaMode::SLEEP as u8), mode);
+    }
+
+    #[test]
+    fn receive_mode_correct() {
+        let config = handle_error!(Config::from_file("./conf.toml".to_string()));
+        let mut lora: Box<dyn LoRa> = match SX1278::from_config(&config.lora_config.unwrap()) {
+            Ok(lora) => Box::new(lora),
+            Err(e) => {
+                error!("When creating lora object: {e}");
+                std::process::exit(-1);
+            }
+        };
+
+        handle_error!(lora.receive_mode());
+
+        let mut mode: u8 = 0x00;
+        handle_error!(lora.spi_read_register(LoRaRegister::OP_MODE, &mut mode));
+        assert_eq!(
+            (LoRaMode::LONG_RANGE as u8 | LoRaMode::RX_CONTINUOUS as u8),
+            mode
+        );
+    }
+
+    #[test]
+    fn transmit_mode_correct() {
+        let config = handle_error!(Config::from_file("./conf.toml".to_string()));
+        let mut lora: Box<dyn LoRa> = match SX1278::from_config(&config.lora_config.unwrap()) {
+            Ok(lora) => Box::new(lora),
+            Err(e) => {
+                error!("When creating lora object: {e}");
+                std::process::exit(-1);
+            }
+        };
+
+        handle_error!(lora.transmit_mode());
+
+        let mut mode: u8 = 0x00;
+        handle_error!(lora.spi_read_register(LoRaRegister::OP_MODE, &mut mode));
+        assert_eq!((LoRaMode::LONG_RANGE as u8 | LoRaMode::TX as u8), mode);
     }
 }
