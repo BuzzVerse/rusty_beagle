@@ -1,7 +1,12 @@
 use crate::defines::*;
+use crate::mqtt::MQTTMessage;
+use crate::{config::RadioConfig, Mode};
 use anyhow::Result;
+use std::sync::mpsc::Sender;
 
-pub trait LoRa {
+pub trait LoRa: Send {
+    // fn config_output_pin(pin_number: GPIOPinNumber) -> Result<gpiod::Lines<Output>>;
+    // fn config_input_pin(pin_number: GPIOPinNumber) -> Result<gpiod::Lines<Input>>;
     fn spi_read_register(&mut self, register: LoRaRegister, value: &mut u8) -> Result<()>;
     fn spi_write_register(&mut self, register: LoRaRegister, value: u8) -> Result<()>;
     fn reset(&mut self) -> Result<()>;
@@ -21,10 +26,18 @@ pub trait LoRa {
     fn get_coding_rate(&mut self) -> Result<u8>;
     fn get_spreading_factor(&mut self) -> Result<u8>;
     fn get_frequency(&mut self) -> Result<u64>;
+    fn get_mode(&self) -> Mode;
     fn has_crc_error(&mut self, has_crc_error: &mut bool) -> Result<()>;
+    fn config_radio(&mut self, radio_config: &RadioConfig) -> Result<()>;
     fn receive_packet(&mut self, crc_error: &mut bool) -> Result<Vec<u8>>;
     fn send_packet(&mut self, buffer: Vec<u8>) -> Result<()>;
     fn config_dio(&mut self) -> Result<()>;
     fn get_packet_snr(&mut self) -> Result<u8>;
     fn get_packet_rssi(&mut self) -> Result<i16>;
+    fn display_parameters(&mut self, radio_config: &RadioConfig) -> Result<()>;
+    fn configure_lora(&mut self, radio_config: &RadioConfig) -> Result<()>;
+    fn receive(&mut self, option_sender: Option<Sender<MQTTMessage>>) -> Result<()>;
+    fn transmit(&mut self) -> Result<()>;
+    fn rt_receive(&mut self, option_sender: Option<Sender<MQTTMessage>>) -> Result<()>;
+    fn rt_transmit(&mut self) -> Result<()>;
 }

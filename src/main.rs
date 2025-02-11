@@ -8,6 +8,7 @@ mod lora_trait;
 mod mqtt;
 mod packet;
 mod post;
+mod sx1278;
 mod version_tag;
 
 extern crate log;
@@ -17,9 +18,12 @@ pub use crate::defines::*;
 pub use crate::logging::start_logger;
 pub use crate::post::post;
 
+use crate::sx1278::SX1278;
 use bme280::BME280Sensor;
 use log::{error, info};
-use lora::LoRa;
+// use lora::LoRa;
+use crate::lora_trait::LoRa;
+use lora::start_lora;
 use mqtt::{MQTTMessage, Mqtt};
 use packet::Status;
 use std::env;
@@ -118,20 +122,21 @@ fn main() {
 
     if let (Some(lora_config), true) = (option_lora_config, mod_state.lora) {
         let radio_config = lora_config.radio_config.clone();
-        let mut lora = match LoRa::from_config(&lora_config) {
-            Ok(lora) => {
-                info!("LoRa object created successfully.");
-                lora
-            }
-            Err(e) => {
-                eprintln!("When creating lora object: {:?}", e);
-                error!("When creating lora object: {e}");
-                std::process::exit(-1);
-            }
+        let mut lora: Box<dyn LoRa> = match lora_config.chip {
+            Chip::SX1278 => match SX1278::from_config(&lora_config) {
+                Ok(lora) => {
+                    info!("LoRa object created successfully.");
+                    Box::new(lora)
+                }
+                Err(e) => {
+                    eprintln!("When creating lora object: {:?}", e);
+                    error!("When creating lora object: {e}");
+                    std::process::exit(-1);
+                }
+            },
         };
-
         threads.push(thread::spawn(move || {
-            handle_error_exit!(lora.start(radio_config, option_sender));
+            handle_error_exit!(start_lora(&mut lora, &radio_config, option_sender));
         }));
     }
 

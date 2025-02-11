@@ -135,3 +135,10 @@ pub enum SpreadingFactor {
     spreading_factor_2048 = 11,
     spreading_factor_4096 = 12,
 }
+
+#[allow(non_camel_case_types)]
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+pub enum Chip {
+    SX1278,
+}
