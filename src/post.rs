@@ -1,5 +1,5 @@
 use crate::defines::*;
-use crate::sx1278::LoRa;
+use crate::lora::LoRa;
 use crate::SX1278;
 use crate::{bme280::BME280Sensor, BME280Config, Config, LoRaConfig};
 use anyhow::{anyhow, Result};
