@@ -1,6 +1,7 @@
-use crate::defines::*;
 use crate::mqtt::MQTTMessage;
+use crate::sx1278::SX1278;
 use crate::{config::RadioConfig, Mode};
+use crate::{defines::*, LoRaConfig};
 use anyhow::{Context, Result};
 use std::sync::mpsc::Sender;
 
@@ -38,6 +39,13 @@ pub trait LoRa: Send {
     fn transmit(&mut self) -> Result<()>;
     fn rt_receive(&mut self, option_sender: Option<Sender<MQTTMessage>>) -> Result<()>;
     fn rt_transmit(&mut self) -> Result<()>;
+}
+
+pub fn lora_from_config(lora_config: &LoRaConfig) -> Result<Box<dyn LoRa>> {
+    let lora: Box<dyn LoRa> = match lora_config.chip {
+        Chip::SX1278 => Box::new(SX1278::from_config(lora_config)?),
+    };
+    Ok(lora)
 }
 
 pub fn start_lora(

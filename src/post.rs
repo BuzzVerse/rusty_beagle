@@ -1,6 +1,5 @@
 use crate::defines::*;
-use crate::lora::LoRa;
-use crate::SX1278;
+use crate::lora::{lora_from_config, LoRa};
 use crate::{bme280::BME280Sensor, BME280Config, Config, LoRaConfig};
 use anyhow::{anyhow, Result};
 use log::{error, info};
@@ -70,9 +69,7 @@ fn post_lora(lora_config: &LoRaConfig) -> Result<()> {
         ));
     }
 
-    let mut lora: Box<dyn LoRa> = match lora_config.chip {
-        Chip::SX1278 => Box::new(SX1278::from_config(lora_config)?),
-    };
+    let mut lora: Box<dyn LoRa> = lora_from_config(lora_config)?;
     let mut mode = 0;
     lora.spi_read_register(LoRaRegister::OP_MODE, &mut mode)?;
     if mode == 0 {
