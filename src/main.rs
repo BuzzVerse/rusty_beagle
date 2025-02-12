@@ -7,6 +7,7 @@ mod lora;
 mod mqtt;
 mod packet;
 mod post;
+mod signals;
 mod sx1278;
 mod version_tag;
 
@@ -22,6 +23,7 @@ use log::{error, info};
 use lora::{lora_from_config, start_lora};
 use mqtt::{MQTTMessage, Mqtt};
 use packet::Status;
+use signals::run_signal_handler;
 use std::env;
 use std::sync::mpsc::channel;
 use std::thread;
@@ -133,6 +135,10 @@ fn main() {
             handle_error_exit!(start_lora(&mut lora, &radio_config, option_sender));
         }));
     }
+
+    threads.push(thread::spawn( move || {
+        handle_error_exit!(run_signal_handler());
+    }));
 
     for thread in threads {
         handle_error_exit!(thread.join());
