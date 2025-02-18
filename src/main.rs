@@ -136,11 +136,23 @@ fn main() {
         }));
     }
 
+    let (signal_sender, signal_receiver) = channel();
+
     threads.push(thread::spawn( move || {
-        handle_error_exit!(run_signal_handler());
+        handle_error_exit!(run_signal_handler(signal_sender));
     }));
 
-    for thread in threads {
-        handle_error_exit!(thread.join());
+    // recv() blocks and waits for a signal from the signal handler thread.
+    // The program exits after receiving to signal_receiver.
+    match signal_receiver.recv() {
+        Ok(signal) => {
+            println!("Received signal in main: {}", signal);
+            info!("Received signal in main: {}", signal);
+            // TODO exit all threads, create new LoRa object and invoke LoRa reset
+        },
+        Err(error) => {
+            eprintln!("main: {}", error);
+            error!("main: {}", error);
+        }
     }
 }

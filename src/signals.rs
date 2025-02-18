@@ -1,23 +1,15 @@
-use log::info;
 use signal_hook::{
     consts::{SIGINT, SIGQUIT, SIGTERM},
     iterator::Signals,
 };
 use std::error::Error;
+use std::sync::mpsc::Sender;
 
-fn graceful_shutdown(sig: i32) {
-    println!(" Received signal {:?}, shutting down gracefully...", sig);
-    info!(" Received signal {:?}, shutting down gracefully...", sig);
-
-    // Unlike std::process::exit, this is async-signal-safe:
-    signal_hook::low_level::exit(0);
-}
-
-pub fn run_signal_handler() -> Result<(), Box<dyn Error>> {
+pub fn run_signal_handler(signal_sender: Sender<i32>) -> Result<(), Box<dyn Error>> {
     let mut signals = Signals::new([SIGINT, SIGQUIT, SIGTERM])?;
 
-    for sig in signals.forever() {
-        graceful_shutdown(sig);
+    for signal in signals.forever() {
+        signal_sender.send(signal)?;
     }
 
     Ok(())
