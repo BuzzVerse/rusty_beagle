@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
  */
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone, Copy)]
-pub enum LoRaRegister {
+pub enum SX1278LoRaRegister {
     FIFO = 0x00,
     OP_MODE = 0x01,
     FRF_MSB = 0x06,
@@ -41,7 +41,7 @@ pub enum LoRaRegister {
  */
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone, Copy)]
-pub enum LoRaMode {
+pub enum SX1278LoRaMode {
     LONG_RANGE = 0x80,
     SLEEP = 0x00,
     STDBY = 0x01,
@@ -55,7 +55,7 @@ pub enum LoRaMode {
  */
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone, Copy)]
-pub enum PAConfiguration {
+pub enum SX1278PAConfiguration {
     PA_BOOST = 0x80,
 }
 
@@ -64,7 +64,7 @@ pub enum PAConfiguration {
  */
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone, Copy)]
-pub enum IRQMask {
+pub enum SX1278IRQMask {
     IRQ_TX_DONE_MASK = 0x08,
     IRQ_RX_DONE_MASK = 0x40,
     IRQ_PAYLOAD_CRC_ERROR = 0x20,
@@ -72,8 +72,8 @@ pub enum IRQMask {
     PA_OUTPUT_PA_BOOST_PIN = 1,
 }
 
-impl IRQMask {
-    pub const IRQ_PAYLOAD_CRC_ERROR_MASK: IRQMask = IRQMask::IRQ_PAYLOAD_CRC_ERROR;
+impl SX1278IRQMask {
+    pub const IRQ_PAYLOAD_CRC_ERROR_MASK: SX1278IRQMask = SX1278IRQMask::IRQ_PAYLOAD_CRC_ERROR;
 }
 
 /*
@@ -134,4 +134,11 @@ pub enum SpreadingFactor {
     spreading_factor_1024 = 10,
     spreading_factor_2048 = 11,
     spreading_factor_4096 = 12,
+}
+
+#[allow(non_camel_case_types)]
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+pub enum Chip {
+    SX1278,
 }

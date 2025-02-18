@@ -8,6 +8,7 @@ device_id = 1
 reconnect_interval = 30
 
 [lora_config]
+chip = "SX1278"
 mode = "RX"
 reset_gpio = "GPIO_66"
 dio0_gpio = "GPIO_60"

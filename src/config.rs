@@ -1,15 +1,17 @@
-use crate::defines::{Bandwidth, CodingRate, SpreadingFactor};
+use crate::{
+    defines::{Bandwidth, CodingRate, SpreadingFactor},
+    Chip,
+};
 use anyhow::{Context, Result};
 use log::info;
 use serde::{Deserialize, Serialize};
 use std::fs;
 
-
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
     pub mqtt_config: Option<MQTTConfig>,
     pub lora_config: Option<LoRaConfig>,
-    pub bme_config: Option<BME280Config>
+    pub bme_config: Option<BME280Config>,
 }
 
 impl Config {
@@ -50,6 +52,7 @@ pub struct SPIConfig {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct LoRaConfig {
+    pub chip: Chip,
     pub mode: Mode,
     pub reset_gpio: GPIOPinNumber,
     pub dio0_gpio: GPIOPinNumber,

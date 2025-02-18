@@ -6,8 +6,9 @@ mod logging;
 mod lora;
 mod mqtt;
 mod packet;
-mod version_tag;
 mod post;
+mod sx1278;
+mod version_tag;
 
 extern crate log;
 
@@ -18,12 +19,12 @@ pub use crate::post::post;
 
 use bme280::BME280Sensor;
 use log::{error, info};
-use lora::LoRa;
-use mqtt::{Mqtt, MQTTMessage};
+use lora::{lora_from_config, start_lora};
+use mqtt::{MQTTMessage, Mqtt};
 use packet::Status;
 use std::env;
-use std::thread;
 use std::sync::mpsc::channel;
+use std::thread;
 
 macro_rules! handle_error_exit {
     ($func:expr) => {
@@ -106,13 +107,18 @@ fn main() {
         let option_sender = option_sender.clone();
         threads.push(thread::spawn(move || {
             let mut bme280 = handle_error_exit!(BME280Sensor::new(bme280_config.clone()));
-            bme280.thread_run(bme280_config, mod_state.mqtt, option_device_id, option_sender);
+            bme280.thread_run(
+                bme280_config,
+                mod_state.mqtt,
+                option_device_id,
+                option_sender,
+            );
         }));
     }
 
     if let (Some(lora_config), true) = (option_lora_config, mod_state.lora) {
         let radio_config = lora_config.radio_config.clone();
-        let mut lora = match LoRa::from_config(&lora_config) {
+        let mut lora = match lora_from_config(&lora_config) {
             Ok(lora) => {
                 info!("LoRa object created successfully.");
                 lora
@@ -123,15 +129,12 @@ fn main() {
                 std::process::exit(-1);
             }
         };
-
         threads.push(thread::spawn(move || {
-            handle_error_exit!(lora.start(radio_config, option_sender));
+            handle_error_exit!(start_lora(&mut lora, &radio_config, option_sender));
         }));
     }
 
     for thread in threads {
         handle_error_exit!(thread.join());
     }
-
 }
-
