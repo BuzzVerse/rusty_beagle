@@ -439,10 +439,11 @@ impl SX1278 {
         self.receive_mode().context("LoRa::receive_packet")?;
 
         loop {
+            // this blocks and waits for a pin event
             let dio0_event = self.dio0_pin.read_event().context("LoRa::receive_packet")?;
 
+            // packet is received on rising edge of DIO0
             if dio0_event.edge == Edge::Rising {
-                // packet is received on rising edge of DIO0
                 let mut has_crc_error = false;
                 self.has_crc_error(&mut has_crc_error)
                     .context("LoRa::receive_packet")?;
