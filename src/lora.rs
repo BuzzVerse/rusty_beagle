@@ -6,8 +6,8 @@ use anyhow::{Context, Result};
 use std::sync::mpsc::Sender;
 
 pub trait LoRa: Send {
-    fn spi_read_register(&mut self, register: LoRaRegister, value: &mut u8) -> Result<()>;
-    fn spi_write_register(&mut self, register: LoRaRegister, value: u8) -> Result<()>;
+    fn spi_read_register(&mut self, register: SX1278LoRaRegister, value: &mut u8) -> Result<()>;
+    fn spi_write_register(&mut self, register: SX1278LoRaRegister, value: u8) -> Result<()>;
     fn reset(&mut self) -> Result<()>;
     fn read_fifo(&mut self, buffer: &mut Vec<u8>) -> Result<()>;
     fn write_fifo(&mut self, buffer: Vec<u8>) -> Result<()>;

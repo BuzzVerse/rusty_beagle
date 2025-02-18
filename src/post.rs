@@ -71,7 +71,7 @@ fn post_lora(lora_config: &LoRaConfig) -> Result<()> {
 
     let mut lora: Box<dyn LoRa> = lora_from_config(lora_config)?;
     let mut mode = 0;
-    lora.spi_read_register(LoRaRegister::OP_MODE, &mut mode)?;
+    lora.spi_read_register(SX1278LoRaRegister::OP_MODE, &mut mode)?;
     if mode == 0 {
         eprintln!("[ ERR ] SPI POST");
         error!("[ ERR ] SPI POST");
@@ -80,7 +80,7 @@ fn post_lora(lora_config: &LoRaConfig) -> Result<()> {
 
     lora.standby_mode()?;
     lora.reset()?;
-    lora.spi_read_register(LoRaRegister::OP_MODE, &mut mode)?;
+    lora.spi_read_register(SX1278LoRaRegister::OP_MODE, &mut mode)?;
 
     if mode == 0 {
         eprintln!("[ ERR ] SPI POST");

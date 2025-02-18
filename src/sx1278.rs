@@ -146,13 +146,13 @@ impl SX1278 {
 
 impl LoRa for SX1278 {
     #[cfg(target_arch = "x86_64")]
-    fn spi_read_register(&mut self, register: LoRaRegister, value: &mut u8) -> Result<()> {
+    fn spi_read_register(&mut self, register: SX1278LoRaRegister, value: &mut u8) -> Result<()> {
         *value = self.mock_registers[register as usize];
         Ok(())
     }
 
     #[cfg(target_arch = "x86_64")]
-    fn spi_write_register(&mut self, register: LoRaRegister, value: u8) -> Result<()> {
+    fn spi_write_register(&mut self, register: SX1278LoRaRegister, value: u8) -> Result<()> {
         self.mock_registers[register as usize] = value;
         Ok(())
     }
@@ -173,7 +173,7 @@ impl LoRa for SX1278 {
     }
 
     #[cfg(target_arch = "arm")]
-    fn spi_read_register(&mut self, register: LoRaRegister, value: &mut u8) -> Result<()> {
+    fn spi_read_register(&mut self, register: SX1278LoRaRegister, value: &mut u8) -> Result<()> {
         let tx_buf: [u8; 2] = [register as u8 | SPIIO::SPI_READ as u8, 0x00];
         let mut rx_buf: [u8; 2] = [0x00, 0x00];
         let mut transfer = SpidevTransfer::read_write(&tx_buf, &mut rx_buf);
@@ -193,7 +193,7 @@ impl LoRa for SX1278 {
 
     fn read_fifo(&mut self, buffer: &mut Vec<u8>) -> Result<()> {
         for value in buffer {
-            self.spi_read_register(LoRaRegister::FIFO, value)
+            self.spi_read_register(SX1278LoRaRegister::FIFO, value)
                 .context("LoRa::read_fifo")?;
         }
 
@@ -201,7 +201,7 @@ impl LoRa for SX1278 {
     }
 
     #[cfg(target_arch = "arm")]
-    fn spi_write_register(&mut self, register: LoRaRegister, value: u8) -> Result<()> {
+    fn spi_write_register(&mut self, register: SX1278LoRaRegister, value: u8) -> Result<()> {
         let tx_buf: [u8; 2] = [register as u8 | SPIIO::SPI_WRITE as u8, value];
         let mut rx_buf: [u8; 2] = [0x00, 0x00];
         let mut transfer = SpidevTransfer::read_write(&tx_buf, &mut rx_buf);
@@ -218,7 +218,7 @@ impl LoRa for SX1278 {
 
     fn write_fifo(&mut self, buffer: Vec<u8>) -> Result<()> {
         for value in buffer {
-            self.spi_write_register(LoRaRegister::FIFO, value)
+            self.spi_write_register(SX1278LoRaRegister::FIFO, value)
                 .context("LoRa::write_fifo")?;
         }
 
@@ -227,8 +227,8 @@ impl LoRa for SX1278 {
 
     fn standby_mode(&mut self) -> Result<()> {
         self.spi_write_register(
-            LoRaRegister::OP_MODE,
-            LoRaMode::LONG_RANGE as u8 | LoRaMode::STDBY as u8,
+            SX1278LoRaRegister::OP_MODE,
+            SX1278LoRaMode::LONG_RANGE as u8 | SX1278LoRaMode::STDBY as u8,
         )
         .context("LoRa::standby_mode")?;
         Self::sleep(10);
@@ -237,8 +237,8 @@ impl LoRa for SX1278 {
 
     fn sleep_mode(&mut self) -> Result<()> {
         self.spi_write_register(
-            LoRaRegister::OP_MODE,
-            LoRaMode::LONG_RANGE as u8 | LoRaMode::SLEEP as u8,
+            SX1278LoRaRegister::OP_MODE,
+            SX1278LoRaMode::LONG_RANGE as u8 | SX1278LoRaMode::SLEEP as u8,
         )
         .context("LoRa::sleep_mode")?;
         Self::sleep(10);
@@ -247,8 +247,8 @@ impl LoRa for SX1278 {
 
     fn receive_mode(&mut self) -> Result<()> {
         self.spi_write_register(
-            LoRaRegister::OP_MODE,
-            LoRaMode::LONG_RANGE as u8 | LoRaMode::RX_CONTINUOUS as u8,
+            SX1278LoRaRegister::OP_MODE,
+            SX1278LoRaMode::LONG_RANGE as u8 | SX1278LoRaMode::RX_CONTINUOUS as u8,
         )
         .context("LoRa::recieve_mode")?;
         Self::sleep(10);
@@ -257,8 +257,8 @@ impl LoRa for SX1278 {
 
     fn transmit_mode(&mut self) -> Result<()> {
         self.spi_write_register(
-            LoRaRegister::OP_MODE,
-            LoRaMode::LONG_RANGE as u8 | LoRaMode::TX as u8,
+            SX1278LoRaRegister::OP_MODE,
+            SX1278LoRaMode::LONG_RANGE as u8 | SX1278LoRaMode::TX as u8,
         )
         .context("LoRa::transmit_mode")?;
         Self::sleep(10);
@@ -272,8 +272,8 @@ impl LoRa for SX1278 {
             _ => 17,
         };
         self.spi_write_register(
-            LoRaRegister::PA_CONFIG,
-            PAConfiguration::PA_BOOST as u8 | correct_level,
+            SX1278LoRaRegister::PA_CONFIG,
+            SX1278PAConfiguration::PA_BOOST as u8 | correct_level,
         )
         .context("LoRa::set_tx_power")?;
         Self::sleep(10);
@@ -282,11 +282,11 @@ impl LoRa for SX1278 {
 
     fn set_frequency(&mut self, frequency: u64) -> Result<()> {
         let frf = (frequency << 19) / 32_000_000;
-        self.spi_write_register(LoRaRegister::FRF_MSB, (frf >> 16) as u8)
+        self.spi_write_register(SX1278LoRaRegister::FRF_MSB, (frf >> 16) as u8)
             .context("LoRa::set_frequency ")?;
-        self.spi_write_register(LoRaRegister::FRF_MID, (frf >> 8) as u8)
+        self.spi_write_register(SX1278LoRaRegister::FRF_MID, (frf >> 8) as u8)
             .context("LoRa::set_frequency ")?;
-        self.spi_write_register(LoRaRegister::FRF_LSB, frf as u8)
+        self.spi_write_register(SX1278LoRaRegister::FRF_LSB, frf as u8)
             .context("LoRa::set_frequency ")?;
         Self::sleep(10);
 
@@ -295,7 +295,7 @@ impl LoRa for SX1278 {
 
     fn set_bandwidth(&mut self, bandwidth: Bandwidth) -> Result<()> {
         let mut value = 0x00;
-        let register = LoRaRegister::MODEM_CONFIG_1;
+        let register = SX1278LoRaRegister::MODEM_CONFIG_1;
         self.spi_read_register(register, &mut value)
             .context("LoRa::set_bandwidth")?;
 
@@ -309,7 +309,7 @@ impl LoRa for SX1278 {
 
     fn set_coding_rate(&mut self, coding_rate: CodingRate) -> Result<()> {
         let mut value = 0x00;
-        let register = LoRaRegister::MODEM_CONFIG_1;
+        let register = SX1278LoRaRegister::MODEM_CONFIG_1;
         self.spi_read_register(register, &mut value)
             .context("LoRa::set_coding_rate")?;
 
@@ -324,7 +324,7 @@ impl LoRa for SX1278 {
 
     fn set_spreading_factor(&mut self, spreading_factor: SpreadingFactor) -> Result<()> {
         let mut value = 0x00;
-        let register = LoRaRegister::MODEM_CONFIG_2;
+        let register = SX1278LoRaRegister::MODEM_CONFIG_2;
         self.spi_read_register(register, &mut value)
             .context("LoRa::set_spreading_factor")?;
 
@@ -343,7 +343,7 @@ impl LoRa for SX1278 {
     fn enable_crc(&mut self) -> Result<()> {
         let mut value = 0x00;
         let crc_on = 0x04;
-        let register = LoRaRegister::MODEM_CONFIG_2;
+        let register = SX1278LoRaRegister::MODEM_CONFIG_2;
         self.spi_read_register(register, &mut value)
             .context("LoRa::enable_crc")?;
 
@@ -356,7 +356,7 @@ impl LoRa for SX1278 {
 
     fn get_bandwidth(&mut self) -> Result<u8> {
         let mut value = 0x00;
-        self.spi_read_register(LoRaRegister::MODEM_CONFIG_1, &mut value)
+        self.spi_read_register(SX1278LoRaRegister::MODEM_CONFIG_1, &mut value)
             .context("LoRa::get_bandwidth")?;
 
         Ok((value & 0xf0) >> 4)
@@ -364,7 +364,7 @@ impl LoRa for SX1278 {
 
     fn get_coding_rate(&mut self) -> Result<u8> {
         let mut value = 0x00;
-        self.spi_read_register(LoRaRegister::MODEM_CONFIG_1, &mut value)
+        self.spi_read_register(SX1278LoRaRegister::MODEM_CONFIG_1, &mut value)
             .context("LoRa::get_coding_rate")?;
 
         Ok(((value & 0x0e) >> 1) + 4)
@@ -372,7 +372,7 @@ impl LoRa for SX1278 {
 
     fn get_spreading_factor(&mut self) -> Result<u8> {
         let mut value = 0x00;
-        self.spi_read_register(LoRaRegister::MODEM_CONFIG_1, &mut value)
+        self.spi_read_register(SX1278LoRaRegister::MODEM_CONFIG_1, &mut value)
             .context("LoRa::get_spreading_factor")?;
 
         Ok((value >> 4) + 8)
@@ -380,11 +380,11 @@ impl LoRa for SX1278 {
 
     fn get_frequency(&mut self) -> Result<u64> {
         let mut values: [u8; 3] = [0, 0, 0];
-        self.spi_read_register(LoRaRegister::FRF_MSB, &mut values[0])
+        self.spi_read_register(SX1278LoRaRegister::FRF_MSB, &mut values[0])
             .context("LoRa::get_frequency")?;
-        self.spi_read_register(LoRaRegister::FRF_MID, &mut values[1])
+        self.spi_read_register(SX1278LoRaRegister::FRF_MID, &mut values[1])
             .context("LoRa::get_frequency")?;
-        self.spi_read_register(LoRaRegister::FRF_LSB, &mut values[2])
+        self.spi_read_register(SX1278LoRaRegister::FRF_LSB, &mut values[2])
             .context("LoRa::get_frequency")?;
 
         let msb = (values[0] as u32) << 16;
@@ -403,9 +403,11 @@ impl LoRa for SX1278 {
     fn has_crc_error(&mut self, has_crc_error: &mut bool) -> Result<()> {
         let mut irq: u8 = 0x00;
 
-        self.spi_read_register(LoRaRegister::IRQ_FLAGS, &mut irq)
+        self.spi_read_register(SX1278LoRaRegister::IRQ_FLAGS, &mut irq)
             .context("LoRa::has_crc_error")?;
-        if irq & IRQMask::IRQ_PAYLOAD_CRC_ERROR as u8 == IRQMask::IRQ_PAYLOAD_CRC_ERROR as u8 {
+        if irq & SX1278IRQMask::IRQ_PAYLOAD_CRC_ERROR as u8
+            == SX1278IRQMask::IRQ_PAYLOAD_CRC_ERROR as u8
+        {
             *has_crc_error = true;
         }
 
@@ -424,7 +426,7 @@ impl LoRa for SX1278 {
         self.enable_crc().context("LoRa::config_radio")?;
         self.set_tx_power(radio_config.tx_power)
             .context("LoRa::config_radio")?;
-        self.spi_write_register(LoRaRegister::MODEM_CONFIG_3, 0x04u8)
+        self.spi_write_register(SX1278LoRaRegister::MODEM_CONFIG_3, 0x04u8)
             .context("LoRa::config_radio")?;
 
         Ok(())
@@ -453,14 +455,17 @@ impl LoRa for SX1278 {
 
         self.standby_mode().context("LoRa::receive_packet")?;
 
-        self.spi_read_register(LoRaRegister::RX_NB_BYTES, &mut return_length)
+        self.spi_read_register(SX1278LoRaRegister::RX_NB_BYTES, &mut return_length)
             .context("LoRa::receive_packet")?;
         let mut buffer: Vec<u8> = vec![0; return_length.into()];
 
         let mut received_address = 0x00;
-        self.spi_read_register(LoRaRegister::FIFO_RX_CURRENT_ADDR, &mut received_address)
-            .context("LoRa::receive_packet")?;
-        self.spi_write_register(LoRaRegister::FIFO_ADDR_PTR, received_address)
+        self.spi_read_register(
+            SX1278LoRaRegister::FIFO_RX_CURRENT_ADDR,
+            &mut received_address,
+        )
+        .context("LoRa::receive_packet")?;
+        self.spi_write_register(SX1278LoRaRegister::FIFO_ADDR_PTR, received_address)
             .context("LoRa::receive_packet")?;
 
         self.read_fifo(&mut buffer)
@@ -471,12 +476,12 @@ impl LoRa for SX1278 {
 
     fn send_packet(&mut self, buffer: Vec<u8>) -> Result<()> {
         let mut tx_address = 0x00;
-        self.spi_read_register(LoRaRegister::FIFO_TX_BASE_ADDR, &mut tx_address)
+        self.spi_read_register(SX1278LoRaRegister::FIFO_TX_BASE_ADDR, &mut tx_address)
             .context("LoRa::send_packet")?;
-        self.spi_write_register(LoRaRegister::FIFO_ADDR_PTR, tx_address)
+        self.spi_write_register(SX1278LoRaRegister::FIFO_ADDR_PTR, tx_address)
             .context("LoRa::send_packet")?;
 
-        self.spi_write_register(LoRaRegister::PAYLOAD_LENGTH, buffer.len() as u8)
+        self.spi_write_register(SX1278LoRaRegister::PAYLOAD_LENGTH, buffer.len() as u8)
             .context("LoRa::send_packet")?;
         self.write_fifo(buffer).context("LoRa::send_packet")?;
 
@@ -519,13 +524,16 @@ impl LoRa for SX1278 {
     #[cfg(target_arch = "arm")]
     fn config_dio(&mut self) -> Result<()> {
         let mut initial_value = 0x00;
-        self.spi_read_register(LoRaRegister::DIO_MAPPING_1, &mut initial_value)
+        self.spi_read_register(SX1278LoRaRegister::DIO_MAPPING_1, &mut initial_value)
             .context("LoRa::config_dio")?;
         match self.mode {
             Mode::RX => {}
             Mode::TX => {
-                self.spi_write_register(LoRaRegister::DIO_MAPPING_1, initial_value | (0b01 << 6))
-                    .context("LoRa::config_dio")?; // DIO0 TxDone
+                self.spi_write_register(
+                    SX1278LoRaRegister::DIO_MAPPING_1,
+                    initial_value | (0b01 << 6),
+                )
+                .context("LoRa::config_dio")?; // DIO0 TxDone
             }
         }
 
@@ -537,7 +545,7 @@ impl LoRa for SX1278 {
      */
     fn get_packet_snr(&mut self) -> Result<u8> {
         let mut value: u8 = 0x00;
-        self.spi_read_register(LoRaRegister::PKT_SNR_VALUE, &mut value)
+        self.spi_read_register(SX1278LoRaRegister::PKT_SNR_VALUE, &mut value)
             .context("LoRa::get_packet_snr")?;
 
         let snr = value.wrapping_neg() / 4;
@@ -550,7 +558,7 @@ impl LoRa for SX1278 {
     fn get_packet_rssi(&mut self) -> Result<i16> {
         let mut value: u8 = 0x00;
         let frequency = self.get_frequency().context("LoRa::get_packet_rssi")?;
-        self.spi_read_register(LoRaRegister::PKT_RSSI_VALUE, &mut value)
+        self.spi_read_register(SX1278LoRaRegister::PKT_RSSI_VALUE, &mut value)
             .context("LoRa::get_packet_rssi")?;
 
         let rssi = if frequency < 868_000_000 {
@@ -566,7 +574,7 @@ impl LoRa for SX1278 {
         self.sleep_mode().context("LoRa::start")?;
         self.config_radio(radio_config).context("LoRa::start")?;
         self.config_dio().context("LoRa::start")?;
-        self.spi_write_register(LoRaRegister::MODEM_CONFIG_3, 0x04u8)
+        self.spi_write_register(SX1278LoRaRegister::MODEM_CONFIG_3, 0x04u8)
             .context("LoRa::start")?;
         Ok(())
     }
@@ -658,9 +666,9 @@ impl LoRa for SX1278 {
     fn transmit(&mut self) -> Result<()> {
         loop {
             let mut lna = 0x00;
-            self.spi_read_register(LoRaRegister::LNA, &mut lna)
+            self.spi_read_register(SX1278LoRaRegister::LNA, &mut lna)
                 .context("LoRa::start")?;
-            self.spi_write_register(LoRaRegister::LNA, lna | 0x03)
+            self.spi_write_register(SX1278LoRaRegister::LNA, lna | 0x03)
                 .context("LoRa::start")?;
 
             self.standby_mode().context("LoRa::start")?;
@@ -727,7 +735,7 @@ mod tests {
 
         let mut value: u8 = 0x00;
         assert!(lora
-            .spi_read_register(LoRaRegister::PAYLOAD_LENGTH, &mut value)
+            .spi_read_register(SX1278LoRaRegister::PAYLOAD_LENGTH, &mut value)
             .is_ok());
     }
 
@@ -744,7 +752,7 @@ mod tests {
 
         let value: u8 = 0xFF;
         assert!(lora
-            .spi_write_register(LoRaRegister::PAYLOAD_LENGTH, value)
+            .spi_write_register(SX1278LoRaRegister::PAYLOAD_LENGTH, value)
             .is_ok());
     }
 
@@ -762,8 +770,11 @@ mod tests {
         handle_error!(lora.standby_mode());
 
         let mut mode: u8 = 0x00;
-        handle_error!(lora.spi_read_register(LoRaRegister::OP_MODE, &mut mode));
-        assert_eq!((LoRaMode::LONG_RANGE as u8 | LoRaMode::STDBY as u8), mode);
+        handle_error!(lora.spi_read_register(SX1278LoRaRegister::OP_MODE, &mut mode));
+        assert_eq!(
+            (SX1278LoRaMode::LONG_RANGE as u8 | SX1278LoRaMode::STDBY as u8),
+            mode
+        );
     }
 
     #[test]
@@ -780,8 +791,11 @@ mod tests {
         handle_error!(lora.sleep_mode());
 
         let mut mode: u8 = 0x00;
-        handle_error!(lora.spi_read_register(LoRaRegister::OP_MODE, &mut mode));
-        assert_eq!((LoRaMode::LONG_RANGE as u8 | LoRaMode::SLEEP as u8), mode);
+        handle_error!(lora.spi_read_register(SX1278LoRaRegister::OP_MODE, &mut mode));
+        assert_eq!(
+            (SX1278LoRaMode::LONG_RANGE as u8 | SX1278LoRaMode::SLEEP as u8),
+            mode
+        );
     }
 
     #[test]
@@ -798,9 +812,9 @@ mod tests {
         handle_error!(lora.receive_mode());
 
         let mut mode: u8 = 0x00;
-        handle_error!(lora.spi_read_register(LoRaRegister::OP_MODE, &mut mode));
+        handle_error!(lora.spi_read_register(SX1278LoRaRegister::OP_MODE, &mut mode));
         assert_eq!(
-            (LoRaMode::LONG_RANGE as u8 | LoRaMode::RX_CONTINUOUS as u8),
+            (SX1278LoRaMode::LONG_RANGE as u8 | SX1278LoRaMode::RX_CONTINUOUS as u8),
             mode
         );
     }
@@ -819,7 +833,10 @@ mod tests {
         handle_error!(lora.transmit_mode());
 
         let mut mode: u8 = 0x00;
-        handle_error!(lora.spi_read_register(LoRaRegister::OP_MODE, &mut mode));
-        assert_eq!((LoRaMode::LONG_RANGE as u8 | LoRaMode::TX as u8), mode);
+        handle_error!(lora.spi_read_register(SX1278LoRaRegister::OP_MODE, &mut mode));
+        assert_eq!(
+            (SX1278LoRaMode::LONG_RANGE as u8 | SX1278LoRaMode::TX as u8),
+            mode
+        );
     }
 }
