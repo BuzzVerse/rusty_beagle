@@ -1,5 +1,6 @@
 use crate::defines::*;
 use crate::lora::{lora_from_config, LoRa};
+use crate::sx1278::SX1278;
 use crate::{bme280::BME280Sensor, BME280Config, Config, LoRaConfig};
 use anyhow::{anyhow, Result};
 use log::{error, info};
@@ -68,28 +69,31 @@ fn post_lora(lora_config: &LoRaConfig) -> Result<()> {
             &lora_config.spi_config.spidev_path
         ));
     }
+    match lora_config.chip {
+        Chip::SX1278 => {
+            let mut lora = SX1278::from_config(lora_config)?;
+            let mut mode = 0;
+            lora.spi_read_register(SX1278LoRaRegister::OP_MODE, &mut mode)?;
+            if mode == 0 {
+                eprintln!("[ ERR ] SPI POST");
+                error!("[ ERR ] SPI POST");
+                return Err(anyhow!("Unable to IO via SPI"));
+            }
 
-    let mut lora: Box<dyn LoRa> = lora_from_config(lora_config)?;
-    let mut mode = 0;
-    lora.spi_read_register(SX1278LoRaRegister::OP_MODE, &mut mode)?;
-    if mode == 0 {
-        eprintln!("[ ERR ] SPI POST");
-        error!("[ ERR ] SPI POST");
-        return Err(anyhow!("Unable to IO via SPI"));
-    }
+            lora.standby_mode()?;
+            lora.reset()?;
+            lora.spi_read_register(SX1278LoRaRegister::OP_MODE, &mut mode)?;
 
-    lora.standby_mode()?;
-    lora.reset()?;
-    lora.spi_read_register(SX1278LoRaRegister::OP_MODE, &mut mode)?;
-
-    if mode == 0 {
-        eprintln!("[ ERR ] SPI POST");
-        error!("[ ERR ] SPI POST");
-        return Err(anyhow!("Unable to IO via SPI"));
-    } else if mode != 9 {
-        eprintln!("[ ERR ] GPIO POST");
-        error!("[ ERR ] GPIO POST");
-        return Err(anyhow!("Unable to IO via GPIO"));
+            if mode == 0 {
+                eprintln!("[ ERR ] SPI POST");
+                error!("[ ERR ] SPI POST");
+                return Err(anyhow!("Unable to IO via SPI"));
+            } else if mode != 9 {
+                eprintln!("[ ERR ] GPIO POST");
+                error!("[ ERR ] GPIO POST");
+                return Err(anyhow!("Unable to IO via GPIO"));
+            }
+        }
     }
 
     println!("[ OK ] SPI POST");
