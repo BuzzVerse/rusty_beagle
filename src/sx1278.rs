@@ -2,13 +2,13 @@ pub use crate::lora::LoRa;
 
 use core::time;
 
-use crate::config::RadioConfig;
+use crate::config::{config_input_pin, config_output_pin, RadioConfig};
 use crate::defines::*;
 use crate::mqtt::MQTTMessage;
 use crate::packet::{Data, DataType, Metadata, Packet, PacketWrapper, BME280};
-use crate::{GPIOPin, GPIOPinNumber, LoRaConfig, Mode};
+use crate::{LoRaConfig, Mode};
 use anyhow::{anyhow, Context, Result};
-use gpiod::{Chip, Edge, EdgeDetect, Input, Lines, Options, Output};
+use gpiod::{Edge, Input, Lines, Output};
 use log::{error, info};
 use spidev::{SpiModeFlags, Spidev, SpidevOptions, SpidevTransfer};
 use std::sync::mpsc::Sender;
@@ -88,9 +88,9 @@ impl SX1278 {
         spidev.configure(&spi_options)?;
 
         let reset_pin =
-            Self::config_output_pin(lora_config.reset_gpio).context("LoRa::from_config")?;
+            config_output_pin(lora_config.reset_gpio).context("LoRa::from_config")?;
         let dio0_pin =
-            Self::config_input_pin(lora_config.dio0_gpio).context("LoRa::from_config")?;
+            config_input_pin(lora_config.dio0_gpio).context("LoRa::from_config")?;
 
         let mode = lora_config.mode.clone();
 
@@ -103,45 +103,7 @@ impl SX1278 {
 
         Ok(lora)
     }
-    #[cfg(target_arch = "arm")]
-    pub fn config_output_pin(pin_number: GPIOPinNumber) -> Result<gpiod::Lines<Output>> {
-        let pin = GPIOPin::from_gpio_pin_number(pin_number);
 
-        let chip = match Chip::new(pin.chip) {
-            Ok(chip) => chip,
-            Err(e) => return Err(anyhow!("While creating gpio chip got {:#?}", e)),
-        };
-
-        let opts = Options::output([pin.offset]);
-
-        let line = match chip.request_lines(opts) {
-            Ok(line) => line,
-            Err(e) => return Err(anyhow!("While requesting gpio line got {:#?}", e)),
-        };
-
-        Ok(line)
-    }
-
-    #[cfg(target_arch = "arm")]
-    pub fn config_input_pin(pin_number: GPIOPinNumber) -> Result<gpiod::Lines<Input>> {
-        let pin = GPIOPin::from_gpio_pin_number(pin_number);
-
-        let chip = match Chip::new(pin.chip) {
-            Ok(chip) => chip,
-            Err(e) => return Err(anyhow!("While creating gpio chip got {:#?}", e)),
-        };
-
-        let opts = Options::input([pin.offset])
-            .edge(EdgeDetect::Rising)
-            .consumer("dio0_pin");
-
-        let line = match chip.request_lines(opts) {
-            Ok(line) => line,
-            Err(e) => return Err(anyhow!("While requesting gpio line got {:#?}", e)),
-        };
-
-        Ok(line)
-    }
     #[cfg(target_arch = "x86_64")]
     pub fn spi_read_register(
         &mut self,
@@ -439,10 +401,11 @@ impl SX1278 {
         self.receive_mode().context("LoRa::receive_packet")?;
 
         loop {
+            // this blocks and waits for a pin event
             let dio0_event = self.dio0_pin.read_event().context("LoRa::receive_packet")?;
 
+            // packet is received on rising edge of DIO0
             if dio0_event.edge == Edge::Rising {
-                // packet is received on rising edge of DIO0
                 let mut has_crc_error = false;
                 self.has_crc_error(&mut has_crc_error)
                     .context("LoRa::receive_packet")?;

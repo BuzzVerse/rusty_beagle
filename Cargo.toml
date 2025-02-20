@@ -11,6 +11,7 @@ gpiod = "0.3.0"
 linux-embedded-hal = "0.4.0"
 log = { version = "0.4.22", features = ["max_level_debug", "release_max_level_info"] }
 serde = { version = "1.0.204", features = ["derive"] }
+signal-hook = "0.3.17"
 spidev = "0.6.0"
 syslog = "^7.0"
 rumqttc = "0.24.0"

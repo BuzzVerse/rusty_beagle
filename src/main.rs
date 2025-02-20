@@ -2,6 +2,7 @@ mod bme280;
 mod config;
 mod conversions;
 mod defines;
+mod graceful_shutdown;
 mod logging;
 mod lora;
 mod mqtt;
@@ -18,6 +19,8 @@ pub use crate::logging::start_logger;
 pub use crate::post::post;
 
 use bme280::BME280Sensor;
+use graceful_shutdown::emergency_reset;
+use graceful_shutdown::run_signal_handler;
 use log::{error, info};
 use lora::{lora_from_config, start_lora};
 use mqtt::{MQTTMessage, Mqtt};
@@ -116,7 +119,7 @@ fn main() {
         }));
     }
 
-    if let (Some(lora_config), true) = (option_lora_config, mod_state.lora) {
+    if let (Some(lora_config), true) = (option_lora_config.clone(), mod_state.lora) {
         let radio_config = lora_config.radio_config.clone();
         let mut lora = match lora_from_config(&lora_config) {
             Ok(lora) => {
@@ -134,7 +137,27 @@ fn main() {
         }));
     }
 
-    for thread in threads {
-        handle_error_exit!(thread.join());
+    let (signal_sender, signal_receiver) = channel();
+
+    threads.push(thread::spawn(move || {
+        handle_error_exit!(run_signal_handler(signal_sender));
+    }));
+
+    // recv() blocks and waits for a signal from the signal handler thread.
+    // The program exits after receiving to signal_receiver.
+    match signal_receiver.recv() {
+        Ok(_signal) => {
+            // drop() takes ownership of threads, and thus drops it after finishing
+            drop(threads);
+
+            // Get reset_pin from config, initialize and use it to reset LoRa
+            if let Some(lora_config) = option_lora_config.clone() {
+                handle_error_exit!(emergency_reset(lora_config.reset_gpio));
+            }
+        },
+        Err(error) => {
+            eprintln!("[Graceful shutdown] {}", error);
+            error!("[Graceful shutdown] {}", error);
+        }
     }
 }
