@@ -2,7 +2,8 @@ use crate::{
     defines::{Bandwidth, CodingRate, SpreadingFactor},
     Chip,
 };
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
+use gpiod::{EdgeDetect, Input, Lines, Options, Output};
 use log::info;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -114,6 +115,46 @@ impl GPIOPin {
             offset: pin_number % 32,
         }
     }
+}
+
+#[cfg(target_arch = "arm")]
+pub fn config_output_pin(pin_number: GPIOPinNumber) -> Result<Lines<Output>> {
+    let pin = GPIOPin::from_gpio_pin_number(pin_number);
+
+    let chip = match gpiod::Chip::new(pin.chip) {
+        Ok(chip) => chip,
+        Err(e) => return Err(anyhow!("While creating gpio chip got {:#?}", e)),
+    };
+
+    let opts = Options::output([pin.offset]);
+
+    let line = match chip.request_lines(opts) {
+        Ok(line) => line,
+        Err(e) => return Err(anyhow!("While requesting gpio line got {:#?}", e)),
+    };
+
+    Ok(line)
+}
+
+#[cfg(target_arch = "arm")]
+pub fn config_input_pin(pin_number: GPIOPinNumber) -> Result<Lines<Input>> {
+    let pin = GPIOPin::from_gpio_pin_number(pin_number);
+
+    let chip = match gpiod::Chip::new(pin.chip) {
+        Ok(chip) => chip,
+        Err(e) => return Err(anyhow!("While creating gpio chip got {:#?}", e)),
+    };
+
+    let opts = Options::input([pin.offset])
+        .edge(EdgeDetect::Rising)
+        .consumer("input_pin");
+
+    let line = match chip.request_lines(opts) {
+        Ok(line) => line,
+        Err(e) => return Err(anyhow!("While requesting gpio line got {:#?}", e)),
+    };
+
+    Ok(line)
 }
 
 #[allow(non_camel_case_types)]

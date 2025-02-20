@@ -7,7 +7,7 @@ use std::sync::mpsc::Sender;
 use std::time::Duration;
 use std::thread;
 
-use crate::sx1278::SX1278;
+use crate::config::config_output_pin;
 use crate::GPIOPinNumber;
 
 pub fn run_signal_handler(signal_sender: Sender<i32>) -> Result<()> {
@@ -26,7 +26,7 @@ pub fn run_signal_handler(signal_sender: Sender<i32>) -> Result<()> {
  * is the reset GPIO pin number from the config file
  */
 pub fn emergency_reset(reset_pin_number: GPIOPinNumber) -> Result<()> {
-    let reset_pin = SX1278::config_output_pin(reset_pin_number)?;
+    let reset_pin = config_output_pin(reset_pin_number)?;
 
     // pull NRST pin low for 5 ms
     reset_pin
