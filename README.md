@@ -36,8 +36,6 @@ rustflags = ["-C", "target-feature=+crt-static"]
 1. Create config for rusty_beagle, example config is available in rusty_beagle/conf.ron
 1. Run ```./rusty_beagle <path_to_config>``` 
 
-> In case of permission errors during POST network connection check, change the capabilities of rusty_beagle binary by running `sudo setcap cap_net_raw+ep [path/to/rusty_beagle]`
-
 # How to build on Apple Silicon using Docker
 
 1. In docker directory run commands below
@@ -72,3 +70,35 @@ docker run --rm -v $(pwd)/output:/output rusty_beagle
     - `tail -f /var/log/rusty_beagle.log` for logs only
 1. To start the daemon at boot, run `systemctl enable rusty-beagled`
     - to disable: `systemctl disable rusty-beagled`
+
+# Sharing connection through USB (Linux hosts only)
+This section explains how to acquire internet connection on BeagleBone Black, by sharing the connection of a machine, that the BeagleBone is connected to via USB.
+The exact steps differ depending on the firewall framework that is used (either ufw & iptables or nftables)
+
+## On BeagleBone Black:
+* Specify the host's USB port as a default gateway for the BeagleBone:
+    * temporarily (not persistent between reboots):
+        * `sudo route add default [ip]`
+    * permanently:
+        1. edit `/etc/systemd/network/usb1.network` - under "\[Network\]" add: "Gateway=\[ip\]"
+        1. restart NetworkManager - `sudo systemctl restart NetworkManager.service`
+    * where \[ip\] is the address of BeagleBone's USB interface on the host machine (either 192.168.6.1 or 192.168.7.1)
+* In case of permission errors when running Rusty Beagle: change the capabilities of the rusty_beagle executable by running `sudo setcap cap_net_raw+ep [path/to/rusty_beagle]`
+
+## On the host machine (ufw & iptables)
+1. Enable packet forwarding for IPv4:
+    1. edit `/etc/sysctl.conf` and uncomment `net.ipv4.ip_forward=1`
+    1. verify: `sysctl -a | fgrep .forwarding | grep ^net | grep ipv4`
+1. Add iptables firewall rules to forward traffic from the USB interface to the WiFi interface:
+    1. `sudo iptables --table nat --append POSTROUTING --out-interface [name of host's working network interface] -j MASQUERADE`
+    1. `sudo iptables --append FORWARD --in-interface [name of host's interface connected to BeagleBone] -j ACCEPT`
+
+## On the host machine (nftables)
+1. Enable packet forwarding for IPv4:
+    1. edit `/etc/sysctl.conf` and uncomment `net.ipv4.ip_forward=1`
+    1. verify: `sysctl -a | fgrep .forwarding | grep ^net | grep ipv4`
+1. Add nftables firewall rules to forward traffic from the USB interface to the WiFi interface:
+    1. `sudo nft add table nat`
+    1. `sudo nft 'add chain nat postrouting { type nat hook postrouting priority 100 ; }'`
+    1. `sudo nft 'add rule nat postrouting oifname "[name of host's working network interface]" counter masquerade'`
+    1. `sudo nft 'add rule inet filter forward iifname "[name of host's interface connected to BeagleBone]" counter accept'`
