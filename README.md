@@ -23,6 +23,10 @@ rustflags = ["-C", "target-feature=+crt-static"]
 # BeagleBone Black and LoRa pinout
 1. Connect LoRa GND & 3.3V pins to corresponding pins on BBB
 1. Connect LoRa module to BBB via SPI
+    * LoRa NSS: BBB CS0 
+    * LoRa MOSI: BBB D1 
+    * LoRa MISO: BBB D0 
+    * LoRa SCK: BBB SCLK
 1. Connect LoRa RST pin to any GPIO pin on BBB
 1. Connect LoRa DIO0 pin to any GPIO pin on BBB
 1. Include chosen SPIDEV and GPIO pins in a config file
@@ -35,8 +39,6 @@ rustflags = ["-C", "target-feature=+crt-static"]
     - ```uboot_overlay_addr5=/lib/firmware/BB-SPIDEV1-00A0.dtbo```
 1. Create config for rusty_beagle, example config is available in rusty_beagle/conf.ron
 1. Run ```./rusty_beagle <path_to_config>``` 
-
-> In case of permission errors during POST network connection check, change the capabilities of rusty_beagle binary by running `sudo setcap cap_net_raw+ep [path/to/rusty_beagle]`
 
 # How to build on Apple Silicon using Docker
 
@@ -72,3 +74,67 @@ docker run --rm -v $(pwd)/output:/output rusty_beagle
     - `tail -f /var/log/rusty_beagle.log` for logs only
 1. To start the daemon at boot, run `systemctl enable rusty-beagled`
     - to disable: `systemctl disable rusty-beagled`
+
+# Configuration file syntax
+The .toml configuration file contains headers - every kind of header is optional, depending of which features are to be used; however if present, a header needs to contain all its fields. Below are the available config headers and their fields:
+* \[mqtt_config\]
+    * ip - IP address of the MQTT broker
+    * port - port of the MQTT broker
+    * login 
+    * password
+    * topic
+    * device_id
+    * reconnect_interval - time in seconds to retry connection
+* \[lora_config\] - also requires .spi_config and .radio_config subheaders
+    * chip - model of LoRa chip that is used
+    * mode - operating mode: RX, TX, etc.
+    * reset_gpio
+    * dio0_gpio
+* \[lora_config.spi_config\]
+    * spidev_path - absolute path to SPIDEV device file, for example: "/dev/spidev0.0"
+    * bits_per_word
+    * max_speed_hz
+    * lsb_first - true/false
+    * spi_mode - for example: "SPI_MODE_0"
+* \[lora_config.radio_config\]
+    * frequency
+    * bandwidth
+    * coding_rate
+    * spreading_factor
+    * tx_power
+* \[bme_config\]
+    * i2c_bus_path - absolue path to I2C device file, for example: "/dev/i2c-2"
+    * i2c_address
+    * measurement_interval
+
+# Sharing connection through USB (Linux hosts only)
+This section explains how to acquire internet connection on BeagleBone Black, by sharing the connection of a machine, that the BeagleBone is connected to via USB.
+The exact steps differ depending on the firewall framework that is used (either iptables or nftables).
+
+## On BeagleBone Black:
+* Specify the host's USB port as a default gateway for the BeagleBone:
+    * temporarily (not persistent between reboots):
+        * `sudo route add default [ip]`
+    * permanently:
+        1. edit `/etc/systemd/network/usb1.network` - under "\[Network\]" add: "Gateway=\[ip\]"
+        1. restart NetworkManager - `sudo systemctl restart NetworkManager.service`
+    * where \[ip\] is the address of BeagleBone's USB interface on the host machine (either 192.168.6.1 or 192.168.7.1)
+* In case of permission errors when running Rusty Beagle: change the capabilities of the rusty_beagle executable by running `sudo setcap cap_net_raw+ep [path/to/rusty_beagle]`
+
+## On the host machine (iptables)
+1. Enable packet forwarding for IPv4:
+    1. edit `/etc/sysctl.conf` and uncomment `net.ipv4.ip_forward=1`
+    1. verify: `sysctl -a | fgrep .forwarding | grep ^net | grep ipv4`
+1. Add iptables firewall rules to forward traffic from the USB interface to the WiFi interface:
+    1. `sudo iptables --table nat --append POSTROUTING --out-interface [name of host's working network interface] -j MASQUERADE`
+    1. `sudo iptables --append FORWARD --in-interface [name of host's interface connected to BeagleBone] -j ACCEPT`
+
+## On the host machine (nftables)
+1. Enable packet forwarding for IPv4:
+    1. edit `/etc/sysctl.conf` and uncomment `net.ipv4.ip_forward=1`
+    1. verify: `sysctl -a | fgrep .forwarding | grep ^net | grep ipv4`
+1. Add nftables firewall rules to forward traffic from the USB interface to the WiFi interface:
+    1. `sudo nft add table nat`
+    1. `sudo nft 'add chain nat postrouting { type nat hook postrouting priority 100 ; }'`
+    1. `sudo nft 'add rule nat postrouting oifname "[name of host's working network interface]" counter masquerade'`
+    1. `sudo nft 'add rule inet filter forward iifname "[name of host's interface connected to BeagleBone]" counter accept'`
