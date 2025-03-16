@@ -1,6 +1,7 @@
 mod bme280;
 mod config;
 mod conversions;
+mod csv_writer;
 mod defines;
 mod graceful_shutdown;
 mod logging;
