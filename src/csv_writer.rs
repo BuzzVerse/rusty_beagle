@@ -5,7 +5,15 @@ use std::sync::mpsc::Receiver;
 use crate::config::*;
 use crate::packet::Packet;
 
-// writer is public so that it can be flushed from main on program exit
+// Data sent here from the LoRa thread through a channel.
+// Either the packet, or information that a CRC error occured.
+#[allow(non_camel_case_types)]
+#[derive(Debug)]
+pub enum CSVPacketWrapper {
+    Packet(Packet),
+    CRC_ERROR,
+}
+
 pub struct CSVWriter {
     pub writer: Writer<File>,
 }
@@ -26,11 +34,12 @@ impl CSVWriter {
     }
 
     // Logging to CSV files is only needed for LoRa tests, hence the LoRaConfig parameter
-    pub fn run_csv_writer(&mut self, lora_config: &LoRaConfig, csv_receiver: Receiver<Packet>) -> Result<()> {
+    pub fn run_csv_writer(&mut self, lora_config: &LoRaConfig, csv_receiver: Receiver<CSVPacketWrapper>) -> Result<()> {
         // Headers 
         self.writer.write_record(["Timestamp", "Packet", "Bandwidth", "Coding rate", "Spreading factor", "TX power"])?;
 
         loop {
+            // Blocks until it gets a packet
             let packet = csv_receiver.recv()?;
             // Millisecond precision
             let timestamp = format!("{}", chrono::offset::Local::now().format("%Y%m%d-%H%M%S%3f"));
