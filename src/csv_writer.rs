@@ -30,19 +30,19 @@ impl CSVWriter {
         // Headers 
         self.writer.write_record(["Timestamp", "Packet", "Bandwidth", "Coding rate", "Spreading factor", "TX power"])?;
 
-        let packet = csv_receiver.recv()?;
-        // Millisecond precision
-        let timestamp = format!("{}", chrono::offset::Local::now().format("%Y%m%d-%H%M%S%3f"));
-        self.writer.write_record([
-            timestamp, 
-            format!("{:?}", packet), 
-            format!("{:?}", lora_config.radio_config.bandwidth),
-            format!("{:?}", lora_config.radio_config.coding_rate),
-            format!("{:?}", lora_config.radio_config.spreading_factor),
-            format!("{}", lora_config.radio_config.tx_power),
-        ])?;
-
-        self.writer.flush()?;
-        Ok(())
+        loop {
+            let packet = csv_receiver.recv()?;
+            // Millisecond precision
+            let timestamp = format!("{}", chrono::offset::Local::now().format("%Y%m%d-%H%M%S%3f"));
+            self.writer.write_record([
+                timestamp,
+                format!("{:?}", packet),
+                format!("{:?}", lora_config.radio_config.bandwidth),
+                format!("{:?}", lora_config.radio_config.coding_rate),
+                format!("{:?}", lora_config.radio_config.spreading_factor),
+                format!("{}", lora_config.radio_config.tx_power),
+            ])?;
+            self.writer.flush()?;
+        }
     }
 }
