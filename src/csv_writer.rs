@@ -1,6 +1,6 @@
 use anyhow::Result;
 use csv::Writer;
-use std::fs::File;
+use std::fs::{self, File};
 use std::sync::mpsc::Receiver;
 use crate::config::*;
 use crate::packet::Packet;
@@ -20,10 +20,21 @@ pub struct CSVWriter {
 
 impl CSVWriter {
     pub fn new(lora_config: &LoRaConfig) -> Result<Self>  {
+        // Generate filename w/ timestamp
         let filename = Self::generate_csv_filename(lora_config);
+
+        // Create a folder for the .csv files if it doesn't exist already
+        let path = "/home/debian/rusty-beagle-csv/";
+        if fs::metadata(path).is_err() {
+            match fs::create_dir(path) {
+                Ok(()) => (),
+                Err(e) => eprintln!("csv_writer: {:?}", e),
+            };
+        }
+
         Ok(
             CSVWriter {
-                writer: Writer::from_path(filename)?,
+                writer: Writer::from_path(format!("{}{}", path, filename))?,
             }
         )
     }
