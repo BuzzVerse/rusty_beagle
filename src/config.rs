@@ -120,7 +120,6 @@ impl GPIOPin {
     }
 }
 
-#[cfg(target_arch = "arm")]
 pub fn config_output_pin(pin_number: GPIOPinNumber) -> Result<Lines<Output>> {
     let pin = GPIOPin::from_gpio_pin_number(pin_number);
 
@@ -139,7 +138,6 @@ pub fn config_output_pin(pin_number: GPIOPinNumber) -> Result<Lines<Output>> {
     Ok(line)
 }
 
-#[cfg(target_arch = "arm")]
 pub fn config_input_pin(pin_number: GPIOPinNumber) -> Result<Lines<Input>> {
     let pin = GPIOPin::from_gpio_pin_number(pin_number);
 
