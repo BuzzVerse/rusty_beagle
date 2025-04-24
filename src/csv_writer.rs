@@ -66,3 +66,33 @@ impl CSVWriter {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use regex::Regex;
+    use log::error;
+    use std::sync::mpsc::channel;
+
+    macro_rules! handle_error {
+        ($func:expr) => {
+            match $func {
+                Err(e) => {
+                    eprintln!("{:?}", e);
+                    error!("{:?}", e);
+                    std::process::exit(-1);
+                }
+                Ok(s) => s,
+            }
+        };
+    }
+
+    #[test]
+    fn generate_csv_filename_correct() {
+        // Frequency & mode taken from the default, valid config (conf.toml in project root)
+        let filename_regex = Regex::new(r"^\d{14}-433000000-RX.csv$").unwrap();
+        let config = handle_error!(Config::from_file("./conf.toml".to_string()));
+        let filename = CSVWriter::generate_csv_filename(&config.lora_config.unwrap());
+        assert!(filename_regex.is_match(&filename));
+    }
+}
