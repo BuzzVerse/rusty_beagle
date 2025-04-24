@@ -3,6 +3,7 @@ pub use crate::lora::LoRa;
 use core::time;
 
 use crate::config::{config_input_pin, config_output_pin, RadioConfig};
+use crate::csv_writer::CSVPacketWrapper;
 use crate::defines::*;
 use crate::mqtt::MQTTMessage;
 use crate::packet::{Data, DataType, Metadata, Packet, PacketWrapper, BME280};
@@ -491,8 +492,8 @@ impl SX1278 {
         self.spi_read_register(SX1278LoRaRegister::DIO_MAPPING_1, &mut initial_value)
             .context("LoRa::config_dio")?;
         match self.mode {
-            Mode::RX => {}
-            Mode::TX => {
+            Mode::RX | Mode::RX_RANGE_TEST => {}
+            Mode::TX | Mode::TX_RANGE_TEST => {
                 self.spi_write_register(
                     SX1278LoRaRegister::DIO_MAPPING_1,
                     initial_value | (0b01 << 6),
@@ -665,12 +666,97 @@ impl LoRa for SX1278 {
         }
     }
 
-    fn rt_receive(&mut self, option_sender: Option<Sender<MQTTMessage>>) -> Result<()> {
-        todo!("Add later");
+    fn rt_receive(&mut self, csv_sender: Sender<CSVPacketWrapper>) -> Result<()> {
+        loop {
+            let mut crc_error = false;
+
+            let received_buffer = match self.receive_packet(&mut crc_error) {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("{:?}", e);
+                    error!("{:?}", e);
+                    std::process::exit(-1);
+                }
+            };
+            println!();
+            println!(
+                "--------------------------------------------------------------------------------"
+            );
+            println!();
+
+            match Packet::new(&received_buffer) {
+                Ok(packet) => {
+                    let snr = self.get_packet_snr().context("LoRa::start")?;
+                    let rssi = self.get_packet_rssi().context("LoRa::start")?;
+
+                    if !crc_error {
+                        println!(
+                            "Received: {:#?}, SNR = {} dB, RSSI = {} dBm",
+                            packet, snr, rssi
+                        );
+                        info!(
+                            "Received: {:?}, SNR = {} dB, RSSI = {} dBm",
+                            packet, snr, rssi
+                        );
+
+                        // send to the CSV writer
+                        let _ = csv_sender.send(CSVPacketWrapper::Packet(packet));
+                    } else {
+                        // using ANSI escape codes for colors in terminal
+                        println!("\x1b[0;31m[CRC ERROR]\x1b[0m\nReceived: {:#?}, SNR = {} dB, RSSI = {} dBm", packet, snr, rssi);
+                        info!(
+                            "[CRC ERROR] Received: {:?}, SNR = {} dB, RSSI = {} dBm",
+                            packet, snr, rssi
+                        );
+                    }
+                }
+                Err(e) => {
+                    println!("Bad package: {:?}", e);
+                    println!();
+                    println!("Received: {:02X?}", received_buffer);
+                    self.sleep_mode().context("LoRa::start")?;
+                    continue;
+                }
+            };
+
+            self.sleep_mode().context("LoRa::start")?;
+        }
     }
 
-    fn rt_transmit(&mut self) -> Result<()> {
-        todo!("Add later");
+    fn rt_transmit(&mut self, csv_sender: Sender<CSVPacketWrapper>) -> Result<()> {
+        loop {
+            let mut lna = 0x00;
+            self.spi_read_register(SX1278LoRaRegister::LNA, &mut lna)
+                .context("LoRa::start")?;
+            self.spi_write_register(SX1278LoRaRegister::LNA, lna | 0x03)
+                .context("LoRa::start")?;
+
+            self.standby_mode().context("LoRa::start")?;
+
+            let dummy_temperature: f32 = -3.2;
+            let dummy_humidity: f32 = 45.6;
+            let dummy_pressure: f32 = 996.6;
+            let packet = Packet {
+                version: 0x33,
+                id: 255, // device_id = 255 for tests
+                msg_id: 0x11,
+                msg_count: 0x00,
+                data_type: DataType::BME280,
+                data: Data::Bme280(BME280 {
+                    temperature: (dummy_temperature * 2.0).round() as i8 as u8,
+                    humidity: dummy_humidity.round() as u8,
+                    pressure: (dummy_pressure - 1000.0).round() as i8 as u8,
+                }),
+            };
+            self.send_packet(packet.to_bytes()?)
+                .context("LoRa::start")?;
+
+            // send to the CSV writer
+            let _ = csv_sender.send(CSVPacketWrapper::Packet(packet));
+
+            self.sleep_mode()?;
+            Self::sleep(2000);
+        }
     }
 }
 

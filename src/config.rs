@@ -70,10 +70,13 @@ pub struct RadioConfig {
     pub tx_power: u8,
 }
 
+#[allow(non_camel_case_types)]
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub enum Mode {
     RX,
     TX,
+    RX_RANGE_TEST,
+    TX_RANGE_TEST
 }
 
 #[allow(non_camel_case_types)]
