@@ -85,25 +85,65 @@ mod tests {
     use log::error;
     use std::sync::mpsc::channel;
 
-    macro_rules! handle_error {
-        ($func:expr) => {
-            match $func {
-                Err(e) => {
-                    eprintln!("{:?}", e);
-                    error!("{:?}", e);
-                    std::process::exit(-1);
-                }
-                Ok(s) => s,
-            }
-        };
-    }
+    use crate::packet::{Data, DataType};
 
     #[test]
     fn generate_csv_filename_correct() {
         // Frequency & mode taken from the default, valid config (conf.toml in project root)
         let filename_regex = Regex::new(r"^\d{14}-433000000-RX.csv$").unwrap();
-        let config = handle_error!(Config::from_file("./conf.toml".to_string()));
-        let filename = CSVWriter::generate_csv_filename(&config.lora_config.unwrap());
+        let lora_config = Config::from_file("./conf.toml".to_string()).unwrap().lora_config.unwrap();
+        let filename = CSVWriter::generate_csv_filename(&lora_config);
         assert!(filename_regex.is_match(&filename));
+    }
+
+    #[test]
+    fn init_writer_ok() {
+        let lora_config = Config::from_file("./conf.toml".to_string()).unwrap().lora_config.unwrap();
+        let mut csv_writer = CSVWriter::new(&lora_config);
+        // Different path for testing purposes
+        csv_writer.path = String::from("./tests/rusty-beagle-csv/");
+
+        assert!(csv_writer.init_writer().is_ok());
+    }
+
+    #[test]
+    fn init_writer_inexistent_path() {
+        let lora_config = Config::from_file("./conf.toml".to_string()).unwrap().lora_config.unwrap();
+        let mut csv_writer = CSVWriter::new(&lora_config);
+        // Different path for testing purposes
+        csv_writer.path = String::from("./tests/inexistent_directory/rusty-beagle-csv/");
+
+        assert!(csv_writer.init_writer().is_err());
+    }
+
+    #[test]
+    fn write_packet_packet_ok() {
+        let lora_config = Config::from_file("./conf.toml".to_string()).unwrap().lora_config.unwrap();
+        let mut csv_writer = CSVWriter::new(&lora_config);
+        // Different path for testing purposes
+        csv_writer.path = String::from("./tests/rusty-beagle-csv/");
+        let mut writer = csv_writer.init_writer().unwrap();
+        let packet = CSVPacketWrapper::Packet(Packet {
+            version: 1,
+            id: 1,
+            msg_id: 1,
+            msg_count: 1,
+            data_type: DataType::Sms,
+            data: Data::Sms(String::from("Buzzverse"))
+        });
+
+        assert!(csv_writer.write_packet(packet, &mut writer).is_ok());
+    }
+
+    #[test]
+    fn write_packet_crc_error_ok() {
+        let lora_config = Config::from_file("./conf.toml".to_string()).unwrap().lora_config.unwrap();
+        let mut csv_writer = CSVWriter::new(&lora_config);
+        // Different path for testing purposes
+        csv_writer.path = String::from("./tests/rusty-beagle-csv/");
+        let mut writer = csv_writer.init_writer().unwrap();
+        let packet = CSVPacketWrapper::CRC_ERROR;
+
+        assert!(csv_writer.write_packet(packet, &mut writer).is_ok());
     }
 }
