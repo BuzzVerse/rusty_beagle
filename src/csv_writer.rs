@@ -15,27 +15,29 @@ pub enum CSVPacketWrapper {
 }
 
 pub struct CSVWriter {
-    pub writer: Writer<File>,
+    lora_config: LoRaConfig,
+    path: String,
 }
 
 impl CSVWriter {
-    pub fn new(lora_config: &LoRaConfig) -> Result<Self>  {
+    pub fn new(lora_config: &LoRaConfig) -> Self  {
+        CSVWriter {
+            lora_config: lora_config.clone(),
+            path: String::from("/home/debian/rusty-beagle-csv/"),
+        }
+    }
+
+    fn init_writer(&self) -> Result<Writer<File>> {
         // Generate filename w/ timestamp
-        let filename = Self::generate_csv_filename(lora_config);
+        let filename = Self::generate_csv_filename(&self.lora_config);
 
         // Create a folder for the .csv files if it doesn't exist already
-        let path = "/home/debian/rusty-beagle-csv/";
-        if fs::metadata(path).is_err() {
-            match fs::create_dir(path) {
-                Ok(()) => (),
-                Err(e) => eprintln!("csv_writer: {:?}", e),
-            };
+        if fs::metadata(&self.path).is_err() {
+            fs::create_dir(&self.path)?;
         }
 
         Ok(
-            CSVWriter {
-                writer: Writer::from_path(format!("{}{}", path, filename))?,
-            }
+            Writer::from_path(format!("{}{}", &self.path, filename))?
         )
     }
 
@@ -44,25 +46,34 @@ impl CSVWriter {
         format!("{}-{}-{:?}.csv", timestamp, lora_config.radio_config.frequency, lora_config.mode)
     }
 
+    fn write_packet(&self, packet: CSVPacketWrapper, writer: &mut Writer<File>) -> Result<()> {
+        // Millisecond precision
+        let timestamp = format!("{}", chrono::offset::Local::now().format("%Y%m%d-%H%M%S%3f"));
+        writer.write_record([
+            timestamp,
+            format!("{:?}", packet),
+            format!("{:?}", self.lora_config.radio_config.bandwidth),
+            format!("{:?}", self.lora_config.radio_config.coding_rate),
+            format!("{:?}", self.lora_config.radio_config.spreading_factor),
+            format!("{}", self.lora_config.radio_config.tx_power),
+        ])?;
+        writer.flush()?;
+
+        Ok(())
+    }
+
     // Logging to CSV files is only needed for LoRa tests, hence the LoRaConfig parameter
-    pub fn run_csv_writer(&mut self, lora_config: &LoRaConfig, csv_receiver: Receiver<CSVPacketWrapper>) -> Result<()> {
+    pub fn run_csv_writer(&self, csv_receiver: Receiver<CSVPacketWrapper>) -> Result<()> {
+        let mut writer = self.init_writer()?;
+
         // Headers 
-        self.writer.write_record(["Timestamp", "Packet", "Bandwidth", "Coding rate", "Spreading factor", "TX power"])?;
+        writer.write_record(["Timestamp", "Packet", "Bandwidth", "Coding rate", "Spreading factor", "TX power"])?;
 
         loop {
             // Blocks until it gets a packet
             let packet = csv_receiver.recv()?;
-            // Millisecond precision
-            let timestamp = format!("{}", chrono::offset::Local::now().format("%Y%m%d-%H%M%S%3f"));
-            self.writer.write_record([
-                timestamp,
-                format!("{:?}", packet),
-                format!("{:?}", lora_config.radio_config.bandwidth),
-                format!("{:?}", lora_config.radio_config.coding_rate),
-                format!("{:?}", lora_config.radio_config.spreading_factor),
-                format!("{}", lora_config.radio_config.tx_power),
-            ])?;
-            self.writer.flush()?;
+
+            self.write_packet(packet, &mut writer)?;
         }
     }
 }

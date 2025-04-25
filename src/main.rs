@@ -140,17 +140,10 @@ fn main() {
                 // Use CSV sender & receiver channel only in RT (Range Test) modes, else csv_sender = None
                 let (csv_sender, csv_receiver) = channel();
 
-                let mut csv_writer = match CSVWriter::new(&lora_config) {
-                    Ok(csv_writer) => csv_writer,
-                    Err(e) => {
-                        eprintln!("When creating csv_writer: {:?}", e);
-                        error!("When creating csv_writer: {e}");
-                        std::process::exit(-1);
-                    }
-                };
+                let csv_writer = CSVWriter::new(&lora_config);
 
                 threads.push(thread::spawn(move || {
-                    handle_error_exit!(csv_writer.run_csv_writer(&lora_config, csv_receiver));
+                    handle_error_exit!(csv_writer.run_csv_writer(csv_receiver));
                 }));
 
                 threads.push(thread::spawn(move || {
