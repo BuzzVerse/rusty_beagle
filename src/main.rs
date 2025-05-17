@@ -1,6 +1,7 @@
 mod bme280;
 mod config;
 mod conversions;
+mod csv_writer;
 mod defines;
 mod graceful_shutdown;
 mod logging;
@@ -14,6 +15,7 @@ mod version_tag;
 extern crate log;
 
 pub use crate::config::*;
+pub use crate::csv_writer::CSVWriter;
 pub use crate::defines::*;
 pub use crate::logging::start_logger;
 pub use crate::post::post;
@@ -132,9 +134,28 @@ fn main() {
                 std::process::exit(-1);
             }
         };
-        threads.push(thread::spawn(move || {
-            handle_error_exit!(start_lora(&mut lora, &radio_config, option_sender));
-        }));
+
+        match lora_config.mode {
+            Mode::RX_RANGE_TEST | Mode::TX_RANGE_TEST => {
+                // Use CSV sender & receiver channel only in RT (Range Test) modes, else csv_sender = None
+                let (csv_sender, csv_receiver) = channel();
+
+                let csv_writer = CSVWriter::new(&lora_config);
+
+                threads.push(thread::spawn(move || {
+                    handle_error_exit!(csv_writer.run_csv_writer(csv_receiver));
+                }));
+
+                threads.push(thread::spawn(move || {
+                    handle_error_exit!(start_lora(&mut lora, &radio_config, option_sender, Some(csv_sender)));
+                }));
+            }
+            _ => {
+                threads.push(thread::spawn(move || {
+                    handle_error_exit!(start_lora(&mut lora, &radio_config, option_sender, None));
+                }));
+            }
+        }
     }
 
     let (signal_sender, signal_receiver) = channel();

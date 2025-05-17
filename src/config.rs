@@ -70,10 +70,13 @@ pub struct RadioConfig {
     pub tx_power: u8,
 }
 
+#[allow(non_camel_case_types)]
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub enum Mode {
     RX,
     TX,
+    RX_RANGE_TEST,
+    TX_RANGE_TEST
 }
 
 #[allow(non_camel_case_types)]
@@ -117,7 +120,6 @@ impl GPIOPin {
     }
 }
 
-#[cfg(target_arch = "arm")]
 pub fn config_output_pin(pin_number: GPIOPinNumber) -> Result<Lines<Output>> {
     let pin = GPIOPin::from_gpio_pin_number(pin_number);
 
@@ -136,7 +138,6 @@ pub fn config_output_pin(pin_number: GPIOPinNumber) -> Result<Lines<Output>> {
     Ok(line)
 }
 
-#[cfg(target_arch = "arm")]
 pub fn config_input_pin(pin_number: GPIOPinNumber) -> Result<Lines<Input>> {
     let pin = GPIOPin::from_gpio_pin_number(pin_number);
 
